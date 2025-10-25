@@ -1,4 +1,10 @@
 /** @type {import('next').NextConfig} */
-const nextConfig = {};
+const nextConfig = {
+  output: 'export', // If you're doing static export
+  trailingSlash: true,
+  images: {
+    unoptimized: true // If using Vercel outside of their image optimization
+  }
+}
 
-export default nextConfig;
+module.exports = nextConfig
