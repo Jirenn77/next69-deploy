@@ -141,6 +141,7 @@ export default function ServiceOrderPage() {
   const [customersError, setCustomersError] = useState(null);
   const [promoSearch, setPromoSearch] = useState("");
   const [bundleSearch, setBundleSearch] = useState("");
+  const [bundleQuantities, setBundleQuantities] = useState({});
   const [newCustomer, setNewCustomer] = useState({
     name: "",
     contact: "",
@@ -2341,7 +2342,15 @@ export default function ServiceOrderPage() {
                         </motion.button>
 
                         <motion.button
-                          onClick={() => setIsBundleListOpen(true)}
+                          onClick={() => {
+                            setIsBundleListOpen(true);
+                            // Initialize bundle quantities to 1
+                            const initialQuantities = {};
+                            bundles.forEach((b) => {
+                              initialQuantities[b.id] = 1;
+                            });
+                            setBundleQuantities(initialQuantities);
+                          }}
                           className="flex items-center justify-center space-x-2 py-2 px-3 bg-purple-50 hover:bg-purple-100 text-purple-700 rounded-lg border border-purple-200 text-sm"
                           whileHover={{ scale: 1.02 }}
                           whileTap={{ scale: 0.98 }}
@@ -2710,7 +2719,10 @@ export default function ServiceOrderPage() {
                       <Dialog
                         as="div"
                         className="relative z-50"
-                        onClose={() => setIsBundleListOpen(false)}
+                        onClose={() => {
+                          setIsBundleListOpen(false);
+                          setBundleQuantities({});
+                        }}
                       >
                         <Transition.Child
                           as={Fragment}
@@ -2744,7 +2756,10 @@ export default function ServiceOrderPage() {
                                     Available Bundles
                                   </Dialog.Title>
                                   <button
-                                    onClick={() => setIsBundleListOpen(false)}
+                                    onClick={() => {
+                                      setIsBundleListOpen(false);
+                                      setBundleQuantities({});
+                                    }}
                                     className="text-gray-500 hover:text-gray-700"
                                   >
                                     <X size={24} />
@@ -2880,6 +2895,55 @@ export default function ServiceOrderPage() {
                                             </div>
                                           )}
 
+                                        {/* Quantity Selection */}
+                                        <div className="mt-4 mb-4 flex items-center justify-between bg-gray-50 p-3 rounded-lg">
+                                          <label className="text-sm font-medium text-gray-700">
+                                            Quantity:
+                                          </label>
+                                          <div className="flex items-center gap-2">
+                                            <button
+                                              onClick={() => {
+                                                const currentQty = bundleQuantities[bundle.id] || 1;
+                                                if (currentQty > 1) {
+                                                  setBundleQuantities({
+                                                    ...bundleQuantities,
+                                                    [bundle.id]: currentQty - 1,
+                                                  });
+                                                }
+                                              }}
+                                              className="w-8 h-8 flex items-center justify-center bg-white border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                                              disabled={(bundleQuantities[bundle.id] || 1) === 1}
+                                            >
+                                              -
+                                            </button>
+                                            <input
+                                              type="number"
+                                              min="1"
+                                              value={bundleQuantities[bundle.id] || 1}
+                                              onChange={(e) => {
+                                                const qty = Math.max(1, parseInt(e.target.value) || 1);
+                                                setBundleQuantities({
+                                                  ...bundleQuantities,
+                                                  [bundle.id]: qty,
+                                                });
+                                              }}
+                                              className="w-16 px-2 py-1 text-center border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                            />
+                                            <button
+                                              onClick={() => {
+                                                const currentQty = bundleQuantities[bundle.id] || 1;
+                                                setBundleQuantities({
+                                                  ...bundleQuantities,
+                                                  [bundle.id]: currentQty + 1,
+                                                });
+                                              }}
+                                              className="w-8 h-8 flex items-center justify-center bg-white border border-gray-300 rounded hover:bg-gray-100"
+                                            >
+                                              +
+                                            </button>
+                                          </div>
+                                        </div>
+
                                         {/* Action Buttons */}
                                         <div className="mt-4 flex justify-between items-center">
                                           <div className="text-sm text-gray-600">
@@ -2891,6 +2955,7 @@ export default function ServiceOrderPage() {
                                             <button
                                               onClick={() => {
                                                 setIsBundleListOpen(false);
+                                                setBundleQuantities({});
                                               }}
                                               className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm"
                                             >
@@ -2898,10 +2963,11 @@ export default function ServiceOrderPage() {
                                             </button>
                                             <button
                                               onClick={() => {
-                                                // Add all bundle services to cart
+                                                // Add all bundle services to cart with quantity
                                                 if (
                                                   bundleServiceMap[bundle.id]
                                                 ) {
+                                                  const quantity = bundleQuantities[bundle.id] || 1;
                                                   const bundleServices =
                                                     bundleServiceMap[
                                                       bundle.id
@@ -2923,7 +2989,7 @@ export default function ServiceOrderPage() {
                                                         service.price ||
                                                           service.originalPrice
                                                       ),
-                                                      quantity: 1,
+                                                      quantity: quantity,
                                                       isFromBundle: true,
                                                       bundleId: bundle.id,
                                                       bundleName: bundle.name,
@@ -2947,10 +3013,11 @@ export default function ServiceOrderPage() {
                                                   );
 
                                                   toast.success(
-                                                    `"${bundle.name}" bundle added to cart!`
+                                                    `"${bundle.name}" bundle (x${quantity}) added to cart!`
                                                   );
                                                 }
                                                 setIsBundleListOpen(false);
+                                                setBundleQuantities({});
                                               }}
                                               className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-medium flex items-center space-x-2"
                                             >
