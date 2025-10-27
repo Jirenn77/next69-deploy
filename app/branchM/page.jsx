@@ -144,7 +144,7 @@ export default function BranchManagementPage() {
         return;
       }
 
-      const response = await fetch("https://api.lizlyskincare.sbs/API/branches.php?action=add", {
+      const response = await fetch("https://api.lizlyskincare.sbs/branches.php?action=add", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

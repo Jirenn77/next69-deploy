@@ -63,7 +63,7 @@ export default function EmployeeManagement() {
     try {
       setIsLoading(true);
       // Replace with your actual API endpoint
-      const response = await fetch("http://localhost/API/employees.php");
+      const response = await fetch("https://api.lizlyskincare.sbs/API/employees.php");
       if (!response.ok) throw new Error("Failed to fetch employees");
       const data = await response.json();
       setEmployees(data);
