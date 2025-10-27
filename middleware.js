@@ -1,11 +1,10 @@
 import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
 
-export function middleware(request: NextRequest) {
+export function middleware(request) {
   const { pathname } = request.nextUrl;
   
   // Define public routes that don't require authentication
-  const publicRoutes = ['/login', '/register'];
+  const publicRoutes = ['/', '/register'];
   const isPublicRoute = publicRoutes.includes(pathname);
   
   // Define admin routes
@@ -25,17 +24,10 @@ export function middleware(request: NextRequest) {
   
   // Allow public routes
   if (isPublicRoute) {
-    // If user is already logged in and trying to access login/register
-    if (isAuthenticated) {
-      // Allow them to access these pages for logout purposes
-      return NextResponse.next();
-    }
     return NextResponse.next();
   }
   
   // For protected routes, we need to check authentication
-  // Since we can't access localStorage in middleware, we'll rely on cookies
-  // You need to set a cookie when user logs in
   
   // Check if route is admin-only
   const isAdminRoute = adminRoutes.some(route => pathname.startsWith(route));
@@ -43,7 +35,7 @@ export function middleware(request: NextRequest) {
   
   if (!isAuthenticated) {
     // Redirect to login if not authenticated
-    const loginUrl = new URL('/login', request.url);
+    const loginUrl = new URL('/', request.url);
     loginUrl.searchParams.set('redirect', pathname);
     return NextResponse.redirect(loginUrl);
   }
@@ -74,4 +66,3 @@ export const config = {
     '/((?!api|_next/static|_next/image|favicon.ico|.*\\.png|.*\\.jpg|.*\\.svg|.*\\.woff|.*\\.woff2).*)',
   ],
 };
-
