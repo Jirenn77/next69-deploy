@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Toaster, toast } from "sonner";
 import Link from "next/link";
@@ -21,37 +21,192 @@ import {
   Save,
   Leaf,
   ChevronDown,
-  ChevronsLeft
+  ChevronsLeft,
+  Building2,
+  MapPin
 } from "lucide-react";
+
+const API_BASE = "https://api.lizlyskincare.sbs";
 
 export default function ViewProfile() {
     const router = useRouter();
-  const pathname = usePathname();
+    const pathname = usePathname();
     const [isProfileOpen, setIsProfileOpen] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
+    const [currentUser, setCurrentUser] = useState(null);
+    const [isLoading, setIsLoading] = useState(true);
     const [formData, setFormData] = useState({
-        name: "John Mark",
-        service: "Hair Stylist",
-        email: "john_mark@yahoo.com",
-        phone: "+639 856 3245",
-        hireDate: "2024-10-10",
-        contactDetails: "Regency Plain Subdivision",
+        name: "",
+        username: "",
+        email: "",
+        phone: "",
+        branch: "",
+        branch_id: "",
+        created_at: "",
         status: "Active",
+        role: "",
     });
 
-    const handleLogout = () => {
-        localStorage.removeItem("authToken");
-        window.location.href = "/";
+    useEffect(() => {
+        const fetchCurrentUser = async () => {
+            try {
+                setIsLoading(true);
+                
+                // Try to get from localStorage first
+                const userData = localStorage.getItem("user");
+                if (userData) {
+                    try {
+                        const user = JSON.parse(userData);
+                        setCurrentUser(user);
+                        console.log("User from localStorage:", user);
+                        
+                        // Populate form with user data
+                        setFormData({
+                            name: user.name || "",
+                            username: user.username || "",
+                            email: user.email || "",
+                            phone: user.contact || user.phone || "",
+                            branch: user.branch_name || user.branch || "",
+                            branch_id: user.branch_id || "",
+                            created_at: user.created_at || "",
+                            status: user.status || "Active",
+                            role: user.role || "",
+                        });
+                    } catch (error) {
+                        console.error("Error parsing user data from localStorage:", error);
+                    }
+                }
+
+                // Also fetch from API to get complete user data
+                const currentUserResponse = await fetch(
+                    `${API_BASE}/branches.php?action=user`,
+                    {
+                        credentials: "include",
+                    }
+                );
+
+                if (currentUserResponse.ok) {
+                    const currentUserData = await currentUserResponse.json();
+                    console.log("Current User Data from API:", currentUserData);
+
+                    // Update current user with API data
+                    setCurrentUser(currentUserData);
+
+                    // Update form with fresh data from API
+                    setFormData({
+                        name: currentUserData.name || "",
+                        username: currentUserData.username || "",
+                        email: currentUserData.email || "",
+                        phone: currentUserData.contact || currentUserData.phone || "",
+                        branch: currentUserData.branch_name || currentUserData.branch || "",
+                        branch_id: currentUserData.branch_id || "",
+                        created_at: currentUserData.created_at || "",
+                        status: currentUserData.status || "Active",
+                        role: currentUserData.role || "",
+                    });
+
+                    // Also update localStorage
+                    localStorage.setItem("user", JSON.stringify(currentUserData));
+                }
+            } catch (error) {
+                console.error("Error fetching user data:", error);
+                toast.error("Failed to load user profile");
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchCurrentUser();
+    }, []);
+
+    const handleLogout = async () => {
+        try {
+            // Clear PHP sessions
+            await Promise.allSettled([
+                fetch(`${API_BASE}/admin.php?action=logout`, {
+                    method: "POST",
+                    credentials: "include"
+                }),
+                fetch(`${API_BASE}/users.php?action=logout`, {
+                    method: "POST",
+                    credentials: "include"
+                })
+            ]);
+        } catch (error) {
+            console.error("Logout API error:", error);
+        } finally {
+            // Clear ALL localStorage data
+            localStorage.removeItem("user");
+            localStorage.removeItem("user_id");
+            localStorage.removeItem("user_name");
+            localStorage.removeItem("role");
+            localStorage.removeItem("branch_id");
+            localStorage.removeItem("branch_name");
+            localStorage.removeItem("loginAttempts");
+            localStorage.removeItem("authToken");
+
+            // Clear sessionStorage
+            sessionStorage.clear();
+
+            // Clear authentication cookies
+            document.cookie = 'auth-token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+            document.cookie = 'isAuthenticated=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+
+            // Redirect to login page
+            window.location.replace("/");
+        }
     };
 
     const handleEditClick = () => {
         setIsEditing(true);
     };
 
-    const handleSaveClick = () => {
-        setIsEditing(false);
-        toast.success("Profile updated successfully!");
-        // Here you would typically send the updated data to your API
+    const handleSaveClick = async () => {
+        try {
+            if (!currentUser || !currentUser.user_id) {
+                toast.error("User ID not found");
+                return;
+            }
+
+            // Prepare payload
+            const payload = {
+                name: formData.name,
+                username: formData.username,
+                email: formData.email,
+                contact: formData.phone,
+                status: formData.status,
+            };
+
+            // Send update to API
+            const response = await fetch(
+                `${API_BASE}/users.php?action=update&id=${currentUser.user_id}`,
+                {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload),
+                }
+            );
+
+            const result = await response.json();
+
+            if (result.success || response.ok) {
+                setIsEditing(false);
+                toast.success("Profile updated successfully!");
+                
+                // Update currentUser with new data
+                const updatedUser = {
+                    ...currentUser,
+                    ...payload
+                };
+                setCurrentUser(updatedUser);
+                localStorage.setItem("user", JSON.stringify(updatedUser));
+            } else {
+                toast.error(result.message || "Failed to update profile");
+            }
+        } catch (error) {
+            console.error("Error updating profile:", error);
+            toast.error("Failed to update profile");
+        }
     };
 
     const handleChange = (e) => {
@@ -61,6 +216,17 @@ export default function ViewProfile() {
             [name]: value
         }));
     };
+
+    if (isLoading) {
+        return (
+            <div className="flex items-center justify-center h-screen">
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600 mx-auto mb-4"></div>
+                    <p className="text-gray-600">Loading profile...</p>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="flex flex-col h-screen bg-[#77DD77] text-gray-900">
@@ -76,7 +242,7 @@ export default function ViewProfile() {
             className="w-10 h-10 rounded-full bg-amber-500 flex items-center justify-center text-lg font-bold cursor-pointer hover:bg-amber-600 transition-colors"
             onClick={() => setIsProfileOpen(!isProfileOpen)}
           >
-            A
+            {formData.name ? formData.name.charAt(0).toUpperCase() : "U"}
           </div>
           <AnimatePresence>
             {isProfileOpen && (
@@ -173,8 +339,10 @@ export default function ViewProfile() {
               <User size={16} />
             </div>
             <div>
-              <p className="text-sm font-medium">Admin User</p>
-              <p className="text-xs text-emerald-300">Administrator</p>
+              <p className="text-sm font-medium">{formData.name || "User"}</p>
+              <p className="text-xs text-emerald-300">
+                {formData.role === "admin" ? "Administrator" : formData.role === "receptionist" ? "Receptionist" : "User"}
+              </p>
             </div>
           </div>
           <button 
@@ -207,6 +375,9 @@ export default function ViewProfile() {
                             <h1 className="text-2xl font-bold text-gray-800">
                                 User Profile
                             </h1>
+                            <p className="text-sm text-gray-600 mt-1">
+                                Manage your account information and preferences
+                            </p>
                         </div>
 
                         <div className="flex space-x-3 mt-4 md:mt-0">
@@ -254,11 +425,24 @@ export default function ViewProfile() {
                     >
                         <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
 
+                            {/* Profile Avatar */}
+                            <div className="flex flex-col items-center md:items-start">
+                                <div className="w-32 h-32 rounded-full bg-emerald-600 flex items-center justify-center text-white text-4xl font-bold mb-4">
+                                    {formData.name ? formData.name.charAt(0).toUpperCase() : "U"}
+                                </div>
+                                <h2 className="text-xl font-bold text-gray-800 text-center md:text-left">
+                                    {formData.name}
+                                </h2>
+                                <p className="text-sm text-gray-600 text-center md:text-left">
+                                    {formData.role === "admin" ? "Administrator" : formData.role === "receptionist" ? "Receptionist" : "User"}
+                                </p>
+                            </div>
+
                             {/* Profile Details */}
                             <div className="md:col-span-2 space-y-4">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
                                         {isEditing ? (
                                             <input
                                                 type="text"
@@ -274,18 +458,18 @@ export default function ViewProfile() {
                                         )}
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Service</label>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Username</label>
                                         {isEditing ? (
                                             <input
                                                 type="text"
-                                                name="service"
-                                                value={formData.service}
+                                                name="username"
+                                                value={formData.username}
                                                 onChange={handleChange}
                                                 className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
                                             />
                                         ) : (
                                             <div className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg">
-                                                {formData.service}
+                                                {formData.username}
                                             </div>
                                         )}
                                     </div>
@@ -313,7 +497,7 @@ export default function ViewProfile() {
                                         )}
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Contact</label>
                                         {isEditing ? (
                                             <div className="relative">
                                                 <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
@@ -336,25 +520,22 @@ export default function ViewProfile() {
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Hire Date</label>
-                                        {isEditing ? (
-                                            <div className="relative">
-                                                <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
-                                                <input
-                                                    type="date"
-                                                    name="hireDate"
-                                                    value={formData.hireDate}
-                                                    onChange={handleChange}
-                                                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-                                                />
-                                            </div>
-                                        ) : (
-                                            <div className="flex items-center w-full p-3 bg-gray-50 border border-gray-200 rounded-lg">
-                                                <Calendar className="mr-2 text-gray-400" size={16} />
-                                                {formData.hireDate}
-                                            </div>
-                                        )}
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Branch</label>
+                                        <div className="flex items-center w-full p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                                            <Building2 className="mr-2 text-gray-400 flex-shrink-0" size={16} />
+                                            <span className="truncate">{formData.branch || "N/A"}</span>
+                                        </div>
                                     </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Created At</label>
+                                        <div className="flex items-center w-full p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                                            <Calendar className="mr-2 text-gray-400" size={16} />
+                                            {formData.created_at || "N/A"}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
                                         {isEditing ? (
@@ -371,29 +552,19 @@ export default function ViewProfile() {
                                             <div className={`w-full p-3 border rounded-lg ${
                                                 formData.status === "Active" 
                                                     ? "bg-green-50 border-green-200 text-green-800" 
-                                                    : "bg-gray-50 border-gray-200"
+                                                    : "bg-red-50 border-red-200 text-red-800"
                                             }`}>
                                                 {formData.status}
                                             </div>
                                         )}
                                     </div>
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Contact Details</label>
-                                    {isEditing ? (
-                                        <textarea
-                                            name="contactDetails"
-                                            value={formData.contactDetails}
-                                            onChange={handleChange}
-                                            rows={3}
-                                            className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-                                        />
-                                    ) : (
-                                        <div className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg min-h-[100px]">
-                                            {formData.contactDetails}
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
+                                        <div className="flex items-center w-full p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                                            <Shield className="mr-2 text-gray-400" size={16} />
+                                            {formData.role === "admin" ? "Administrator" : formData.role === "receptionist" ? "Receptionist" : "User"}
                                         </div>
-                                    )}
+                                    </div>
                                 </div>
                             </div>
                         </div>
