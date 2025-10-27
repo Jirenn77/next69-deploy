@@ -643,12 +643,6 @@ export default function Memberships() {
                 >
                   <User size={16} /> Profile
                 </Link>
-                <Link
-                  href="/roles"
-                  className="flex items-center gap-3 px-4 py-3 hover:bg-gray-100 w-full text-gray-700"
-                >
-                  <Settings size={16} /> Settings
-                </Link>
                 <button
                   className="flex items-center gap-3 px-4 py-3 hover:bg-red-50 w-full text-red-500"
                   onClick={handleLogout}
@@ -766,6 +760,11 @@ export default function Memberships() {
                             label: "Memberships",
                             icon: <UserPlus size={16} />,
                             badge: 3,
+                          },
+                          {
+                            href: "/membership-report2",
+                            label: "Membership Records",
+                            icon: <BarChart3 size={16} />,
                           },
                           {
                             href: "/items2",

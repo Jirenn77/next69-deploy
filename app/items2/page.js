@@ -821,6 +821,11 @@ export default function BeautyDeals() {
                         {[
                           { href: "/servicess2", label: "All Services", icon: <Layers size={16} /> },
                           { href: "/membership2", label: "Memberships", icon: <UserPlus size={16} />, badge: 3 },
+                          {
+                            href: "/membership-report2",
+                            label: "Membership Records",
+                            icon: <BarChart3 size={16} />,
+                          },
                           { href: "/items2", label: "Beauty Deals", icon: <Tag size={16} />, badge: 'New' },
                           { href: "/serviceorder2", label: "Service Acquire", icon: <ClipboardList size={16} /> },
                         ].map((link, index) => (

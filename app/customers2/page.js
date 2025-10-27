@@ -1044,6 +1044,11 @@ export default function CustomersPage() {
                             badge: 3,
                           },
                           {
+                            href: "/membership-report2",
+                            label: "Membership Records",
+                            icon: <BarChart3 size={16} />,
+                          },
+                          {
                             href: "/items2",
                             label: "Beauty Deals",
                             icon: <Tag size={16} />,
