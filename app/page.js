@@ -338,38 +338,17 @@ export default function Login() {
   // After admin login attempt, decide what to do next
   const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(sanitizedIdentifier);
   
-  // If it's an email and admin login failed, check if we should show admin error or try receptionist
-  if (isEmail && !isAdminLoginSuccessful) {
-    // Check if the error indicates the email doesn't exist as admin
-    const adminErrorStr = JSON.stringify(adminLoginError).toLowerCase();
-    const shouldTryReceptionist = adminErrorStr.includes('invalid email or password') || 
-                                 adminErrorStr.includes('not found') ||
-                                 adminErrorStr.includes('no admin');
-    
-    if (shouldTryReceptionist) {
-      console.log("Email not found in admin table, trying receptionist login...");
-      // Continue to receptionist login
-    } else {
-      // Show the admin error and stop
-      toast.error(adminLoginError?.error || adminLoginError || "Invalid admin credentials.");
-      setLoginAttempts((prev) => {
-        const newAttempts = prev + 1;
-        localStorage.setItem("loginAttempts", newAttempts);
-        return newAttempts;
-      });
-      return;
-    }
+  // If admin login failed, automatically proceed to receptionist login
+  // Don't stop - let receptionist login handle the authentication
+  if (!isAdminLoginSuccessful) {
+    console.log("Admin login failed, trying receptionist login...");
+    // Continue to receptionist login - don't return here
   }
 
   // If we reach here, we need to try receptionist login
   // RECEPTIONIST LOGIN - Check if branch is selected first
   if (!selectedBranchId) {
-    // If it's an email that failed admin login, show appropriate error
-    if (isEmail && !isAdminLoginSuccessful) {
-      toast.error("Invalid email or password. Please check your credentials.");
-    } else {
-      toast.error("Please select a branch to login as receptionist.");
-    }
+    toast.error("Please select a branch to continue.");
     
     setLoginAttempts((prev) => {
       const newAttempts = prev + 1;
