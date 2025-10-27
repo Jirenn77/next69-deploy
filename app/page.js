@@ -192,7 +192,7 @@ export default function Login() {
       window.removeEventListener('focus', handleFocus);
       window.removeEventListener('popstate', handlePopState);
     };
-  }, [router]);
+  }, []); // Empty dependency array to run only once
 
   const handleSubmit = async (e) => {
   e.preventDefault();
