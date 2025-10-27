@@ -35,6 +35,7 @@ export default function Dashboard() {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [period, setPeriod] = useState("day");
   const [customDate, setCustomDate] = useState(new Date());
+  const [currentUser, setCurrentUser] = useState(null);
   const [dateRange, setDateRange] = useState({
     start: new Date(),
     end: new Date(),
@@ -54,6 +55,7 @@ export default function Dashboard() {
 
       try {
         const user = JSON.parse(userData);
+        setCurrentUser(user);
         // If user is admin, redirect to admin dashboard
         if (user.role === 'admin') {
           router.replace("/home");
@@ -65,6 +67,28 @@ export default function Dashboard() {
     };
 
     checkAuth();
+
+    // Fetch complete user data from API
+    const fetchCurrentUser = async () => {
+      try {
+        const currentUserResponse = await fetch(
+          `${API_BASE}/branches.php?action=user`,
+          {
+            credentials: "include",
+          }
+        );
+
+        if (currentUserResponse.ok) {
+          const currentUserData = await currentUserResponse.json();
+          setCurrentUser(currentUserData);
+          localStorage.setItem("user", JSON.stringify(currentUserData));
+        }
+      } catch (error) {
+        console.error("Error fetching user data:", error);
+      }
+    };
+
+    fetchCurrentUser();
   }, [router]);
 
   const [dashboardData, setDashboardData] = useState({
@@ -267,7 +291,7 @@ export default function Dashboard() {
             className="w-10 h-10 rounded-full bg-amber-500 flex items-center justify-center text-lg font-bold cursor-pointer hover:bg-amber-600 transition-colors"
             onClick={() => setIsProfileOpen(!isProfileOpen)}
           >
-            R
+            {currentUser?.name ? currentUser.name.charAt(0).toUpperCase() : "R"}
           </div>
           <AnimatePresence>
             {isProfileOpen && (
@@ -513,8 +537,10 @@ export default function Dashboard() {
                     <User size={16} />
                   </div>
                   <div>
-                    <p className="text-sm font-medium">Reception User</p>
-                    <p className="text-xs text-emerald-300">Receptionist</p>
+                    <p className="text-sm font-medium">{currentUser?.name || "Reception User"}</p>
+                    <p className="text-xs text-emerald-300">
+                      {currentUser?.role === "admin" ? "Administrator" : currentUser?.role === "receptionist" ? "Receptionist" : "User"}
+                    </p>
                   </div>
                 </div>
                 <button className="text-emerald-300 hover:text-white transition-colors">

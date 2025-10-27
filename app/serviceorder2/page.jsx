@@ -1461,8 +1461,10 @@ export default function ServiceOrderPage() {
                     <User size={16} />
                   </div>
                   <div>
-                    <p className="text-sm font-medium">Reception User</p>
-                    <p className="text-xs text-emerald-300">Receptionist</p>
+                    <p className="text-sm font-medium">{currentUser?.name || "Reception User"}</p>
+                    <p className="text-xs text-emerald-300">
+                      {currentUser?.role === "admin" ? "Administrator" : currentUser?.role === "receptionist" ? "Receptionist" : "User"}
+                    </p>
                   </div>
                 </div>
                 <button className="text-emerald-300 hover:text-white transition-colors"

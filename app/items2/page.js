@@ -67,6 +67,7 @@ export default function BeautyDeals() {
   const [selectedDeal, setSelectedDeal] = useState(null);
   const [selectedDiscount, setSelectedDiscount] = useState(null);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [currentUser, setCurrentUser] = useState(null);
   const [activeTab, setActiveTab] = useState("promo");
   const [newItem, setNewItem] = useState({
     type: "promo",
@@ -136,6 +137,41 @@ export default function BeautyDeals() {
 
   fetchData();
 }, []);
+
+  useEffect(() => {
+    const fetchCurrentUser = async () => {
+      try {
+        // Try to get from localStorage first
+        const userData = localStorage.getItem("user");
+        if (userData) {
+          try {
+            const user = JSON.parse(userData);
+            setCurrentUser(user);
+          } catch (error) {
+            console.error("Error parsing user data from localStorage:", error);
+          }
+        }
+
+        // Also fetch from API to get complete user data
+        const currentUserResponse = await fetch(
+          "https://api.lizlyskincare.sbs/branches.php?action=user",
+          {
+            credentials: "include",
+          }
+        );
+
+        if (currentUserResponse.ok) {
+          const currentUserData = await currentUserResponse.json();
+          setCurrentUser(currentUserData);
+          localStorage.setItem("user", JSON.stringify(currentUserData));
+        }
+      } catch (error) {
+        console.error("Error fetching user data:", error);
+      }
+    };
+
+    fetchCurrentUser();
+  }, []);
 
   useEffect(() => {
     const fetchBundles = async () => {
@@ -908,8 +944,10 @@ export default function BeautyDeals() {
                     <User size={16} />
                   </div>
                   <div>
-                    <p className="text-sm font-medium">Reception User</p>
-                    <p className="text-xs text-emerald-300">Receptionist</p>
+                    <p className="text-sm font-medium">{currentUser?.name || "Reception User"}</p>
+                    <p className="text-xs text-emerald-300">
+                      {currentUser?.role === "admin" ? "Administrator" : currentUser?.role === "receptionist" ? "Receptionist" : "User"}
+                    </p>
                   </div>
                 </div>
                 <button className="text-emerald-300 hover:text-white transition-colors"
