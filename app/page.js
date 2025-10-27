@@ -35,6 +35,7 @@ export default function Login() {
 
   const passwordRef = useRef(null);
   const identifierRef = useRef(null);
+  const hasCheckedAuth = useRef(false);
 
   // Helper function to set authentication cookie
   const setAuthCookie = (userData) => {
@@ -155,10 +156,21 @@ export default function Login() {
   useEffect(() => {
     // Check if user is already logged in and redirect immediately
     const checkAuthAndRedirect = () => {
+      // Prevent infinite loop by checking if we've already tried
+      if (hasCheckedAuth.current) {
+        return;
+      }
+
       const userData = localStorage.getItem("user");
-      if (userData) {
+      const authCookie = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('isAuthenticated='));
+      
+      // Only redirect if BOTH localStorage and cookie exist
+      if (userData && authCookie) {
         try {
           const user = JSON.parse(userData);
+          hasCheckedAuth.current = true; // Mark as checked
           // Redirect based on role
           if (user.role === 'admin') {
             window.location.replace("/home");
@@ -175,7 +187,10 @@ export default function Login() {
 
     // Listen for focus events (when user comes back to the tab)
     const handleFocus = () => {
-      checkAuthAndRedirect();
+      // Only check on focus if we haven't already checked
+      if (!hasCheckedAuth.current) {
+        checkAuthAndRedirect();
+      }
     };
     window.addEventListener('focus', handleFocus);
 
