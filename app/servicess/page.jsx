@@ -523,8 +523,8 @@ export default function ServiceGroupsPage() {
                 averagePrice: group.services?.length
                   ? (
                       group.services.reduce(
-                        (acc, s) => acc + parseFloat(s.price || 0),
-                        0
+                    (acc, s) => acc + parseFloat(s.price || 0),
+                    0
                       ) / group.services.length
                     ).toFixed(2)
                   : "0.00",
@@ -988,12 +988,7 @@ export default function ServiceGroupsPage() {
                 exit={{ opacity: 0, y: -10 }}
                 transition={{ duration: 0.2 }}
               >
-                <Link
-                  href="/profiles"
-                  className="flex items-center gap-3 px-4 py-3 hover:bg-gray-100 w-full text-gray-700"
-                >
-                  <User size={16} /> Profile
-                </Link>
+    
                 <Link
                   href="/roles"
                   className="flex items-center gap-3 px-4 py-3 hover:bg-gray-100 w-full text-gray-700"
@@ -1314,7 +1309,7 @@ export default function ServiceGroupsPage() {
                     setIsAddModalOpen(true);
                   } else {
                     // If there's a selected group from the panel, open modal
-                    setIsAddModalOpen(true);
+                  setIsAddModalOpen(true);
                   }
                 }
               }}

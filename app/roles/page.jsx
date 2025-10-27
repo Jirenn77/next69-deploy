@@ -275,6 +275,7 @@ useEffect(() => {
           { path: "/employeeM", icon: Users, label: "Employee Management" },
           { path: "/userManage", icon: Users, label: "User Management" },
           { path: "/branchM", icon: Home, label: "Branch Management" },
+          { path: "/archivees", icon: Archive, label: "Customer Archive" },
         ].map((item) => (
           <Link key={item.path} href={item.path} passHref>
             <div
@@ -649,12 +650,6 @@ useEffect(() => {
           >
             Roles Management
           </button>
-          <button
-            onClick={() => setActiveTab("advanced")}
-            className={`px-4 py-2 font-medium text-sm whitespace-nowrap ${activeTab === "advanced" ? "text-emerald-600 border-b-2 border-emerald-600" : "text-gray-500 hover:text-gray-700"}`}
-          >
-            Advanced Permissions
-          </button>
         </div>
 
         {/* Roles Tab Content */}
@@ -796,6 +791,59 @@ useEffect(() => {
             transition={{ delay: 0.1 }}
             className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden"
           >
+            <div className="p-4 md:p-6">
+              <h2 className="text-lg font-semibold text-gray-800 mb-2">
+                Advanced Permissions
+              </h2>
+              <p className="text-sm text-gray-500 mb-6">
+                Toggle permissions for different user roles. Changes will be applied immediately.
+              </p>
+
+              <div className="space-y-4">
+                {Object.entries(permissionCategories).map(([category, perms]) => (
+                  <div key={category} className="border border-gray-200 rounded-lg overflow-hidden">
+                    <button
+                      onClick={() => togglePermissionSection(category)}
+                      className="w-full p-4 bg-gray-50 border-b border-gray-200 flex justify-between items-center hover:bg-gray-100 transition-colors"
+                    >
+                      <div className="flex items-center space-x-4">
+                        <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center">
+                          <Shield size={16} className="text-emerald-600" />
+                        </div>
+                        <span className="font-medium text-gray-700 text-left">{category}</span>
+                      </div>
+                      <ChevronDown
+                        className={`text-gray-400 transition-transform ${expandedPermissions[category] ? 'rotate-180' : ''}`}
+                        size={20}
+                      />
+                    </button>
+
+                    <AnimatePresence>
+                      {expandedPermissions[category] && (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: "auto" }}
+                          exit={{ opacity: 0, height: 0 }}
+                          transition={{ duration: 0.3 }}
+                          className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4"
+                        >
+                          {perms.map((permission) => (
+                            <div key={permission} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                              <span className="text-sm text-gray-700">{permission}</span>
+                              <Switch
+                                id={permission}
+                                checked={selectedPermissions.includes(permission) || permissions[permission]}
+                                onCheckedChange={() => toggleNewPermission(permission)}
+                              />
+                            </div>
+                          ))}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                ))}
+              </div>
+            </div>
           </motion.div>
         )}
       </main>

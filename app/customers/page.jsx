@@ -460,7 +460,7 @@ const shouldShowNewMemberBadge = (customer) => {
     let expireDate = null;
 
     const isPromoType = type === "promo" || membershipTemplates.find(m => m.id.toString() === type && m.type === "promo");
-    
+
     if (type === "basic") {
       coverage = 5000;
     } else if (type === "pro") {

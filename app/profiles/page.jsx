@@ -547,3 +547,304 @@ export default function ViewProfile() {
         </div>
     );
 }
+
+                                    className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg"
+
+                                    whileHover={{ scale: 1.05 }}
+
+                                    whileTap={{ scale: 0.95 }}
+
+                                >
+
+                                    <Edit size={18} />
+
+                                    <span>Edit Profile</span>
+
+                                </motion.button>
+
+                            )}
+
+                        </div>
+
+                    </motion.div>
+
+
+
+                    {/* Profile Content */}
+
+                    <motion.div
+
+                        initial={{ opacity: 0 }}
+
+                        animate={{ opacity: 1 }}
+
+                        transition={{ delay: 0.1 }}
+
+                        className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden"
+
+                    >
+
+                        <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
+
+
+                            {/* Profile Avatar */}
+                            <div className="flex flex-col items-center md:items-start">
+                                <div className="w-32 h-32 rounded-full bg-emerald-600 flex items-center justify-center text-white text-4xl font-bold mb-4">
+                                    {formData.name ? formData.name.charAt(0).toUpperCase() : "U"}
+                                </div>
+                                <h2 className="text-xl font-bold text-gray-800 text-center md:text-left">
+                                    {formData.name}
+                                </h2>
+                                <p className="text-sm text-gray-600 text-center md:text-left">
+                                    {formData.role === "admin" ? "Administrator" : formData.role === "receptionist" ? "Receptionist" : "User"}
+                                </p>
+                            </div>
+
+
+                            {/* Profile Details */}
+
+                            <div className="md:col-span-2 space-y-4">
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+                                    <div>
+
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+                                        {isEditing ? (
+
+                                            <input
+
+                                                type="text"
+
+                                                name="name"
+
+                                                value={formData.name}
+
+                                                onChange={handleChange}
+
+                                                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+
+                                            />
+
+                                        ) : (
+
+                                            <div className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg">
+
+                                                {formData.name}
+
+                                            </div>
+
+                                        )}
+
+                                    </div>
+
+                                    <div>
+
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Username</label>
+                                        {isEditing ? (
+
+                                            <input
+
+                                                type="text"
+
+                                                name="username"
+                                                value={formData.username}
+                                                onChange={handleChange}
+
+                                                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+
+                                            />
+
+                                        ) : (
+
+                                            <div className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg">
+
+                                                {formData.username}
+                                            </div>
+
+                                        )}
+
+                                    </div>
+
+                                </div>
+
+
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+                                    <div>
+
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+
+                                        {isEditing ? (
+
+                                            <div className="relative">
+
+                                                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
+
+                                                <input
+
+                                                    type="email"
+
+                                                    name="email"
+
+                                                    value={formData.email}
+
+                                                    onChange={handleChange}
+
+                                                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+
+                                                />
+
+                                            </div>
+
+                                        ) : (
+
+                                            <div className="flex items-center w-full p-3 bg-gray-50 border border-gray-200 rounded-lg">
+
+                                                <Mail className="mr-2 text-gray-400" size={16} />
+
+                                                {formData.email}
+
+                                            </div>
+
+                                        )}
+
+                                    </div>
+
+                                    <div>
+
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Contact</label>
+                                        {isEditing ? (
+
+                                            <div className="relative">
+
+                                                <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
+
+                                                <input
+
+                                                    type="text"
+
+                                                    name="phone"
+
+                                                    value={formData.phone}
+
+                                                    onChange={handleChange}
+
+                                                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+
+                                                />
+
+                                            </div>
+
+                                        ) : (
+
+                                            <div className="flex items-center w-full p-3 bg-gray-50 border border-gray-200 rounded-lg">
+
+                                                <Phone className="mr-2 text-gray-400" size={16} />
+
+                                                {formData.phone}
+
+                                            </div>
+
+                                        )}
+
+                                    </div>
+
+                                </div>
+
+
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+                                    <div>
+
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Branch</label>
+                                        <div className="flex items-center w-full p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                                            <span className="truncate">{formData.branch || "N/A"}</span>
+                                        </div>
+                                            </div>
+
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Created At</label>
+                                            <div className="flex items-center w-full p-3 bg-gray-50 border border-gray-200 rounded-lg">
+
+                                                <Calendar className="mr-2 text-gray-400" size={16} />
+
+                                            {formData.created_at || "N/A"}
+                                        </div>
+                                            </div>
+
+                                    </div>
+
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+
+                                        {isEditing ? (
+
+                                            <select
+
+                                                name="status"
+
+                                                value={formData.status}
+
+                                                onChange={handleChange}
+
+                                                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+
+                                            >
+
+                                                <option value="Active">Active</option>
+
+                                                <option value="Inactive">Inactive</option>
+
+                                            </select>
+
+                                        ) : (
+
+                                            <div className={`w-full p-3 border rounded-lg ${
+
+                                                formData.status === "Active" 
+
+                                                    ? "bg-green-50 border-green-200 text-green-800" 
+
+                                                    : "bg-red-50 border-red-200 text-red-800"
+                                            }`}>
+
+                                                {formData.status}
+
+                                            </div>
+
+                                        )}
+
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
+                                        <div className="flex items-center w-full p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                                            <Shield className="mr-2 text-gray-400" size={16} />
+                                            {formData.role === "admin" ? "Administrator" : formData.role === "receptionist" ? "Receptionist" : "User"}
+                                </div>
+
+                                        </div>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    </motion.div>
+
+                </main>
+
+            </div>
+
+        </div>
+
+    );
+
+}

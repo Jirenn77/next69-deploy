@@ -620,12 +620,18 @@ export default function MembershipExpirationReport() {
       <Toaster position="top-right" richColors />
 
       {/* Header */}
-      <header className="flex items-center justify-between bg-emerald-800 text-white p-4 w-full h-16 pl-64 relative">
+      <header className="flex items-center justify-between bg-emerald-700 text-white p-4 w-full h-16 pl-64 relative">
         <div className="flex items-center space-x-4">
           {/* Space for potential left-aligned elements */}
         </div>
 
         <div className="flex items-center space-x-4 flex-grow justify-center">
+          <button
+            className="p-2 bg-emerald-600 rounded-full hover:bg-emerald-500 transition-colors"
+            onClick={() => setIsModalOpen(true)}
+          >
+            <Plus size={20} />
+          </button>
           <div className="relative">
             <Search
               className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
@@ -647,7 +653,7 @@ export default function MembershipExpirationReport() {
             className="w-10 h-10 rounded-full bg-amber-500 flex items-center justify-center text-lg font-bold cursor-pointer hover:bg-amber-600 transition-colors"
             onClick={() => setIsProfileOpen(!isProfileOpen)}
           >
-            A
+            {currentUser?.name ? currentUser.name.charAt(0).toUpperCase() : "R"}
           </div>
           <AnimatePresence>
             {isProfileOpen && (
@@ -663,12 +669,6 @@ export default function MembershipExpirationReport() {
                   className="flex items-center gap-3 px-4 py-3 hover:bg-gray-100 w-full text-gray-700"
                 >
                   <User size={16} /> Profile
-                </Link>
-                <Link
-                  href="/roles"
-                  className="flex items-center gap-3 px-4 py-3 hover:bg-gray-100 w-full text-gray-700"
-                >
-                  <Settings size={16} /> Settings
                 </Link>
                 <button
                   className="flex items-center gap-3 px-4 py-3 hover:bg-red-50 w-full text-red-500"
@@ -719,7 +719,7 @@ export default function MembershipExpirationReport() {
           <div className="w-full px-4 space-y-1 overflow-y-auto flex-grow custom-scrollbar">
             {/* Dashboard */}
             <Menu as="div" className="relative w-full">
-              <Link href="/home" passHref>
+              <Link href="/home2" passHref>
                 <Menu.Button
                   as="div"
                   className={`w-full p-3 rounded-lg text-left flex items-center cursor-pointer transition-all ${router.pathname === "/home" ? "bg-emerald-600 shadow-md" : "hover:bg-emerald-600/70"}`}
@@ -730,7 +730,7 @@ export default function MembershipExpirationReport() {
                     <Home size={18} />
                   </div>
                   <span>Dashboard</span>
-                  {router.pathname === "/home" && (
+                  {router.pathname === "/home2" && (
                     <motion.div
                       className="ml-auto w-2 h-2 bg-white rounded-full"
                       initial={{ scale: 0 }}
@@ -778,29 +778,29 @@ export default function MembershipExpirationReport() {
                       >
                         {[
                           {
-                            href: "/servicess",
+                            href: "/servicess2",
                             label: "All Services",
                             icon: <Layers size={16} />,
                           },
                           {
-                            href: "/membership",
+                            href: "/membership2",
                             label: "Memberships",
                             icon: <UserPlus size={16} />,
                             badge: 3,
                           },
                           {
-                            href: "/membership-report",
+                            href: "/membership-report2",
                             label: "Membership Records",
                             icon: <BarChart3 size={16} />,
                           },
                           {
-                            href: "/items",
+                            href: "/items2",
                             label: "Beauty Deals",
                             icon: <Tag size={16} />,
                             badge: "New",
                           },
                           {
-                            href: "/serviceorder",
+                            href: "/serviceorder2",
                             label: "Service Acquire",
                             icon: <ClipboardList size={16} />,
                           },
@@ -880,12 +880,12 @@ export default function MembershipExpirationReport() {
                       >
                         {[
                           {
-                            href: "/customers",
+                            href: "/customers2",
                             label: "Customers",
                             icon: <Users size={16} />,
                           },
                           {
-                            href: "/invoices",
+                            href: "/invoices2",
                             label: "Invoices",
                             icon: <FileText size={16} />,
                           },
@@ -941,13 +941,16 @@ export default function MembershipExpirationReport() {
                     <User size={16} />
                   </div>
                   <div>
-                    <p className="text-sm font-medium">Admin User</p>
-                    <p className="text-xs text-emerald-300">Administrator</p>
+                    <p className="text-sm font-medium">{currentUser?.name || "Reception User"}</p>
+                    <p className="text-xs text-emerald-300">
+                      {currentUser?.role === "admin" ? "Administrator" : currentUser?.role === "receptionist" ? "Receptionist" : "User"}
+                    </p>
                   </div>
                 </div>
-                <button className="text-emerald-300 hover:text-white transition-colors"
+                <button
+                  className="text-emerald-300 hover:text-white transition-colors"
                   onClick={handleLogout}
-              >
+                >
                   <LogOut size={18} />
                 </button>
               </div>
@@ -1471,7 +1474,6 @@ export default function MembershipExpirationReport() {
                             "Date & Time",
                             "Customer",
                             "Branch",
-                            "Handled By",
                             "Status",
                             "Type",
                             "Amount",
@@ -1537,10 +1539,6 @@ export default function MembershipExpirationReport() {
 
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                   {log.branch_name || "N/A"}
-                                </td>
-
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                  {log.performed_by_name || "N/A"}
                                 </td>
 
                                 <td className="px-6 py-4 whitespace-nowrap">
