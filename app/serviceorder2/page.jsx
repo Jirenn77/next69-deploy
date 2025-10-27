@@ -887,7 +887,7 @@ export default function ServiceOrderPage() {
       };
 
       const response = await fetch(
-        "https://api.lizlyskincare.sbs/API/customers.php?action=add",
+        "https://api.lizlyskincare.sbs/customers.php?action=add",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -1014,7 +1014,7 @@ export default function ServiceOrderPage() {
 
     try {
       const response = await fetch(
-        "https://api.lizlyskincare.sbs/API/customers.php?action=add",
+        "https://api.lizlyskincare.sbs/customers.php?action=add",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
