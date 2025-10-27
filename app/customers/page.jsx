@@ -403,12 +403,15 @@ const shouldShowNewMemberBadge = (customer) => {
         } else if (type === "pro") {
           coverage = 10000;
           price = 10000;
-        } else if (type === "promo") {
-          coverage = parseFloat(consumable_amount || 0);
-          price = parseFloat(price || 0);
+        } else if (type === "promo" || membershipTemplates.find(m => m.id.toString() === type && m.type === "promo")) {
+          const selectedTemplate = membershipTemplates.find(m => m.id.toString() === type);
+          coverage = parseFloat(consumable_amount || (selectedTemplate?.consumable_amount || 0));
+          price = parseFloat(price || (selectedTemplate?.price || 0));
         }
 
-        if (!expireDate && type !== "promo") {
+        const isPromoType = type === "promo" || membershipTemplates.find(m => m.id.toString() === type && m.type === "promo");
+        
+        if (!expireDate && !isPromoType) {
           const today = new Date();
           today.setMonth(today.getMonth() + (type === "pro" ? 2 : 1));
           expireDate = today.toISOString().split("T")[0];
@@ -456,18 +459,21 @@ const shouldShowNewMemberBadge = (customer) => {
     let coverage = 0;
     let expireDate = null;
 
+    const isPromoType = type === "promo" || membershipTemplates.find(m => m.id.toString() === type && m.type === "promo");
+    
     if (type === "basic") {
       coverage = 5000;
     } else if (type === "pro") {
       coverage = 10000;
-    } else if (type === "promo") {
-      coverage = parseFloat(consumable_amount || 0);
+    } else if (isPromoType) {
+      const selectedTemplate = membershipTemplates.find(m => m.id.toString() === type);
+      coverage = parseFloat(consumable_amount || (selectedTemplate?.consumable_amount || 0));
       if (!no_expiration && valid_until) {
         expireDate = valid_until;
       }
     }
 
-    if (type !== "promo") {
+    if (!isPromoType) {
       const today = new Date();
       today.setMonth(today.getMonth() + (type === "pro" ? 2 : 1));
       expireDate = today.toISOString().split("T")[0];
@@ -485,11 +491,14 @@ const shouldShowNewMemberBadge = (customer) => {
     const branchId = currentUser?.branch_id || null;
     const userName = currentUser?.name || "Unknown User";
 
+    // Determine the actual type from template if template ID was selected
+    const actualType = isPromoType ? "promo" : type;
+
     const payload = {
       customer_id: customerId,
       membership_id: membershipId,
       action: "renew",
-      type,
+      type: actualType,
       coverage, // new coverage to add
       price: parseFloat(price || 0),
       expire_date: expireDate,
@@ -987,12 +996,6 @@ const shouldShowNewMemberBadge = (customer) => {
                 exit={{ opacity: 0, y: -10 }}
                 transition={{ duration: 0.2 }}
               >
-                <Link
-                  href="/profiles"
-                  className="flex items-center gap-3 px-4 py-3 hover:bg-gray-100 w-full text-gray-700"
-                >
-                  <User size={16} /> Profile
-                </Link>
                 <Link
                   href="/roles"
                   className="flex items-center gap-3 px-4 py-3 hover:bg-gray-100 w-full text-gray-700"
@@ -2214,12 +2217,12 @@ const shouldShowNewMemberBadge = (customer) => {
                       setSelectedType(type);
 
                       const template = membershipTemplates.find(
-                        (m) => m.type === type
+                        (m) => m.type === type || m.id.toString() === type
                       );
 
                       setRenewMembership((prev) => ({
                         ...prev,
-                        type,
+                        type: template ? template.type : type,
                         price: template
                           ? template.price
                           : type === "basic"
@@ -2244,12 +2247,18 @@ const shouldShowNewMemberBadge = (customer) => {
                   >
                     <option value="basic">Basic (₱3,000 for 5,000)</option>
                     <option value="pro">Pro (₱6,000 for 10,000)</option>
-                    <option value="promo">Promo (Custom)</option>
+                    {membershipTemplates
+                      .filter((m) => m.type === "promo")
+                      .map((m) => (
+                        <option key={m.id} value={m.id}>
+                          {m.name} (Promo)
+                        </option>
+                      ))}
                   </select>
                 </div>
 
                 {/* Promo-only Fields */}
-                {selectedType === "promo" && (
+                {(selectedType === "promo" || membershipTemplates.find(m => m.id.toString() === selectedType && m.type === "promo")) && (
                   <>
                     <div>
                       <label className="block text-sm font-medium mb-1">

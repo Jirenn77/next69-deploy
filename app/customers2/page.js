@@ -391,18 +391,21 @@ export default function CustomersPage() {
       let coverage = 0;
       let expireDate = null;
 
+      const isPromoType = type === "promo" || membershipTemplates.find(m => m.id.toString() === type && m.type === "promo");
+      
       if (type === "basic") {
         coverage = 5000;
       } else if (type === "pro") {
         coverage = 10000;
-      } else if (type === "promo") {
-        coverage = parseFloat(consumable_amount || 0);
+      } else if (isPromoType) {
+        const selectedTemplate = membershipTemplates.find(m => m.id.toString() === type);
+        coverage = parseFloat(consumable_amount || (selectedTemplate?.consumable_amount || 0));
         if (!no_expiration && valid_until) {
           expireDate = valid_until;
         }
       }
 
-      if (type !== "promo") {
+      if (!isPromoType) {
         const today = new Date();
         today.setMonth(today.getMonth() + (type === "pro" ? 2 : 1));
         expireDate = today.toISOString().split("T")[0];
@@ -415,11 +418,14 @@ export default function CustomersPage() {
         return;
       }
 
+      // Determine the actual type from template if template ID was selected
+      const actualType = isPromoType ? "promo" : type;
+
       const payload = {
         customer_id: customerId,
         membership_id: membershipId,
         action: "renew",
-        type,
+        type: actualType,
         coverage, // new coverage to add
         price: parseFloat(price || 0),
         expire_date: expireDate,
@@ -2087,12 +2093,12 @@ export default function CustomersPage() {
                       setSelectedType(type);
 
                       const template = membershipTemplates.find(
-                        (m) => m.type === type
+                        (m) => m.type === type || m.id.toString() === type
                       );
 
                       setRenewMembership((prev) => ({
                         ...prev,
-                        type,
+                        type: template ? template.type : type,
                         price: template
                           ? template.price
                           : type === "basic"
@@ -2117,12 +2123,18 @@ export default function CustomersPage() {
                   >
                     <option value="basic">Basic (₱3,000 for 5,000)</option>
                     <option value="pro">Pro (₱6,000 for 10,000)</option>
-                    <option value="promo">Promo (Custom)</option>
+                    {membershipTemplates
+                      .filter((m) => m.type === "promo")
+                      .map((m) => (
+                        <option key={m.id} value={m.id}>
+                          {m.name} (Promo)
+                        </option>
+                      ))}
                   </select>
                 </div>
 
                 {/* Promo-only Fields */}
-                {selectedType === "promo" && (
+                {(selectedType === "promo" || membershipTemplates.find(m => m.id.toString() === selectedType && m.type === "promo")) && (
                   <>
                     <div>
                       <label className="block text-sm font-medium mb-1">
