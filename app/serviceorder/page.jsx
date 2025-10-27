@@ -551,20 +551,28 @@ export default function ServiceOrderPage() {
     fetchMembershipTemplates();
   }, []);
 
-  const totalAmount = selectedServices.reduce(
-    (sum, s) => sum + parseFloat(s.price),
-    0
-  );
+  useEffect(() => {
+    const fetchCurrentUser = async () => {
+      try {
+        const currentUserResponse = await fetch(
+          "https://api.lizlyskincare.sbs/branches.php?action=user",
+          {
+            credentials: "include",
+          }
+        );
 
-  const promoReduction = promoApplied?.discountedPrice ?? 0;
+        if (currentUserResponse.ok) {
+          const currentUserData = await currentUserResponse.json();
+          setCurrentUser(currentUserData);
+          localStorage.setItem("user", JSON.stringify(currentUserData));
+        }
+      } catch (error) {
+        console.error("Error fetching user data:", error);
+      }
+    };
 
-  const discountReduction = (() => {
-    if (!discount) return 0;
-    if (discount.discount_type === "percentage") {
-      return (totalAmount * discount.value) / 100;
-    }
-    return discount.value;
-  })();
+    fetchCurrentUser();
+  }, []);
 
   const calculatedSubtotal = Math.max(
     selectedServices.reduce(
@@ -573,6 +581,19 @@ export default function ServiceOrderPage() {
     ),
     0
   );
+
+  const promoReduction = promoApplied?.discountedPrice ?? 0;
+
+  const discountReduction = (() => {
+    if (!discount) return 0;
+    const discountType = discount.discount_type || discount.discountType || "percentage";
+    const discountValue = discount.value || discount.discountValue || discount.discount_value || 0;
+    
+    if (discountType === "percentage") {
+      return (calculatedSubtotal * parseFloat(discountValue)) / 100;
+    }
+    return parseFloat(discountValue);
+  })();
 
   const premiumServiceIds = membershipServices.map((s) => s.id);
 
@@ -1507,8 +1528,10 @@ export default function ServiceOrderPage() {
                     <User size={16} />
                   </div>
                   <div>
-                    <p className="text-sm font-medium">Admin User</p>
-                    <p className="text-xs text-emerald-300">Administrator</p>
+                    <p className="text-sm font-medium">{currentUser?.name || "Admin User"}</p>
+                    <p className="text-xs text-emerald-300">
+                      {currentUser?.role === "admin" ? "Administrator" : currentUser?.role === "receptionist" ? "Receptionist" : "User"}
+                    </p>
                   </div>
                 </div>
                 <button
@@ -1540,7 +1563,7 @@ export default function ServiceOrderPage() {
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
               <div>
                 <h1 className="text-2xl font-bold text-gray-800">
-                  Service Acquisition
+                  Service Acquire
                 </h1>
                 <p className="text-sm text-gray-500 mt-1">
                   Process customer service purchases
@@ -3086,12 +3109,17 @@ export default function ServiceOrderPage() {
                         <div className="flex justify-between text-blue-600">
                           <span>Discount:</span>
                           <span>
-                            {discount.name}{" "}
-                            {discount.discount_type === "percentage"
-                              ? `(${discount.value || 0}%)`
-                              : discount.discount_type === "fixed"
-                                ? `(-₱${(discount.value || 0).toFixed(2)})`
-                                : ""}
+                            {discount.name || discount.discount_name || "Discount"}{" "}
+                            {(() => {
+                              const discountType = discount.discount_type || discount.discountType || "percentage";
+                              const discountValue = discount.value || discount.discountValue || discount.discount_value || 0;
+                              if (discountType === "percentage") {
+                                return `(${discountValue}%)`;
+                              } else if (discountType === "fixed") {
+                                return `(-₱${parseFloat(discountValue).toFixed(2)})`;
+                              }
+                              return "";
+                            })()}
                           </span>
                         </div>
                       )}
