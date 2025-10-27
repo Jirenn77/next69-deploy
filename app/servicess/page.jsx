@@ -68,12 +68,13 @@ export default function ServiceGroupsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [selectedGroupForService, setSelectedGroupForService] = useState(null);
   const [newService, setNewService] = useState({
     name: "",
     price: "",
     duration: "",
     description: "",
-    group_id: null, // Add group selection for All Services tab
+    group_id: null,
   });
   const [isAddGroupModalOpen, setIsAddGroupModalOpen] = useState(false);
   const [newGroup, setNewGroup] = useState({
@@ -441,23 +442,25 @@ export default function ServiceGroupsPage() {
   };
 
   const handleAddService = async () => {
-    // Determine which group to use
-    const targetGroup = selectedGroup || serviceGroups.find(g => (g.id || g.group_id) === newService.group_id);
+    // Determine which group to use: selectedGroup (from side panel) or selectedGroupForService (from All Services tab)
+    const targetGroup = selectedGroup || selectedGroupForService;
+    const groupIdToUse = targetGroup?.id || targetGroup?.group_id || newService.group_id;
     
-    if (!targetGroup && !newService.group_id) {
-      toast.error("Please select a service group.");
+    if (!newService.name || !newService.price) {
+      toast.error("Please fill in all required fields.");
       return;
     }
 
-    if (!newService.name || !newService.price) {
-      toast.error("Please fill in all required fields.");
+    // If no group is selected
+    if (!groupIdToUse) {
+      toast.error("Please select a service group.");
       return;
     }
 
     // Find the latest group data from state
     const currentGroup = serviceGroups.find(
       (g) =>
-        (g.id || g.group_id) === (targetGroup?.id || targetGroup?.group_id || newService.group_id)
+        (g.id || g.group_id) === groupIdToUse
     );
 
     const groupServices = currentGroup?.services || [];
@@ -481,12 +484,10 @@ export default function ServiceGroupsPage() {
       category: currentGroup?.group_name,
     };
 
-    const groupId = targetGroup?.id || targetGroup?.group_id || newService.group_id;
-
     try {
       console.log("Sending:", {
         service: serviceToAdd,
-        group_id: groupId,
+        group_id: groupIdToUse,
       });
 
       const response = await fetch(
@@ -496,7 +497,7 @@ export default function ServiceGroupsPage() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             service: serviceToAdd,
-            group_id: groupId,
+            group_id: groupIdToUse,
           }),
         }
       );
@@ -542,6 +543,7 @@ export default function ServiceGroupsPage() {
           await fetchAllServices();
         }
 
+        // Reset form
         setNewService({
           name: "",
           price: "",
@@ -549,6 +551,7 @@ export default function ServiceGroupsPage() {
           description: "",
           group_id: null,
         });
+        setSelectedGroupForService(null);
         setIsAddModalOpen(false);
         toast.success(`Service "${newService.name}" added successfully!`);
       } else {
@@ -1306,8 +1309,13 @@ export default function ServiceGroupsPage() {
                 if (activeTab === "service-groups") {
                   setIsAddGroupModalOpen(true);
                 } else {
-                  // Handle add service logic here
-                  setIsAddModalOpen(true);
+                  // For All Services tab, check if there's a selected group
+                  if (!selectedGroup) {
+                    setIsAddModalOpen(true);
+                  } else {
+                    // If there's a selected group from the panel, open modal
+                    setIsAddModalOpen(true);
+                  }
                 }
               }}
               className="flex items-center space-x-2 bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 px-4 rounded-lg transition-colors font-medium shadow-md hover:shadow-lg"
@@ -1318,7 +1326,7 @@ export default function ServiceGroupsPage() {
               <span>
                 {activeTab === "service-groups"
                   ? "New Service Group"
-                  : "New Service"},
+                  : "New Service"}
               </span>
             </motion.button>
           </motion.div>
@@ -1590,20 +1598,25 @@ export default function ServiceGroupsPage() {
                     Add New Service
                   </h2>
                   <div className="space-y-4">
-                    {/* Show group selector only when in All Services tab */}
-                    {!selectedGroup && activeTab === "all-services" && (
+                    {/* Show group selector when no group is selected (e.g., from All Services tab) */}
+                    {!selectedGroup && !selectedGroupForService && (
                       <div>
                         <label className="block text-sm font-medium mb-2 text-gray-700">
                           Service Group <span className="text-red-500">*</span>
                         </label>
                         <select
                           value={newService.group_id || ""}
-                          onChange={(e) =>
+                          onChange={(e) => {
+                            const selectedId = e.target.value;
+                            const group = serviceGroups.find(
+                              (g) => (g.id || g.group_id).toString() === selectedId
+                            );
+                            setSelectedGroupForService(group);
                             setNewService({
                               ...newService,
-                              group_id: e.target.value,
-                            })
-                          }
+                              group_id: selectedId,
+                            });
+                          }}
                           className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                           required
                         >
@@ -1616,6 +1629,15 @@ export default function ServiceGroupsPage() {
                         </select>
                       </div>
                     )}
+                    
+                    {/* Show selected group info when in Service Groups tab */}
+                    {selectedGroup && (
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                        <label className="text-xs font-medium text-blue-600 uppercase">Group</label>
+                        <p className="text-sm font-semibold text-blue-900">{selectedGroup.group_name}</p>
+                      </div>
+                    )}
+                    
                     <div>
                       <label className="block text-sm font-medium mb-2 text-gray-700">
                         Service Name
@@ -1678,6 +1700,7 @@ export default function ServiceGroupsPage() {
                           description: "",
                           group_id: null,
                         });
+                        setSelectedGroupForService(null);
                       }}
                       className="px-4 py-2.5 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium"
                       whileHover={{ scale: 1.05 }}
