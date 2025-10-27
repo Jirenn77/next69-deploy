@@ -158,8 +158,8 @@ export default function BranchManagementPage() {
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || "Failed to add branch");
 
-      // ✅ Use the actual branch object from backend
-      setBranches((prev) => [...prev, result.branch]);
+      // ✅ Refetch branches to get the complete updated list
+      await fetchBranches();
 
       // Reset form + close modal
       setIsModalOpen(false);
