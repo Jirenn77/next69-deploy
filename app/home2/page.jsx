@@ -27,7 +27,7 @@ import {
 } from "lucide-react";
 
 export default function Dashboard() {
-      const router = useRouter();
+  const router = useRouter();
   const pathname = usePathname();
   const [searchQuery, setSearchQuery] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -41,6 +41,7 @@ export default function Dashboard() {
   });
 
   const todayStr = new Date().toISOString().slice(0, 10);
+  const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "https://api.lizlyskincare.sbs";
 
   // Authentication check
   useEffect(() => {
@@ -161,9 +162,42 @@ export default function Dashboard() {
     toast("Add Service Item Group functionality triggered.");
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem("authToken");
-    window.location.href = "/";
+  const handleLogout = async () => {
+    try {
+      // Clear PHP sessions
+      await Promise.allSettled([
+        fetch(`${API_BASE}/admin.php?action=logout`, {
+          method: "POST",
+          credentials: "include"
+        }),
+        fetch(`${API_BASE}/users.php?action=logout`, {
+          method: "POST", 
+          credentials: "include"
+        })
+      ]);
+    } catch (error) {
+      console.error("Logout API error:", error);
+    } finally {
+      // Clear ALL localStorage data
+      localStorage.removeItem("user");
+      localStorage.removeItem("user_id");
+      localStorage.removeItem("user_name");
+      localStorage.removeItem("role");
+      localStorage.removeItem("branch_id");
+      localStorage.removeItem("branch_name");
+      localStorage.removeItem("loginAttempts");
+      localStorage.removeItem("authToken");
+      
+      // Clear session storage
+      sessionStorage.clear();
+      
+      // Clear authentication cookies
+      document.cookie = 'auth-token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+      document.cookie = 'isAuthenticated=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+      
+      // Redirect to login page
+      window.location.replace("/");
+    }
   };
 
   // Animation variants
