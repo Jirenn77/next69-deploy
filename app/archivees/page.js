@@ -58,7 +58,7 @@ export default function ArchivePage() {
   const fetchArchivedCustomers = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch("http://localhost/API/archive.php?action=get");
+      const response = await fetch("https://api.lizlyskincare.sbs/archive.php?action=get");
       if (!response.ok) throw new Error("Failed to fetch archived customers");
       const data = await response.json();
       setArchivedCustomers(Array.isArray(data) ? data : []);
@@ -117,7 +117,7 @@ const performRestore = async (archiveId, customerName) => {
     // Show loading toast
     const loadingToast = toast.loading(`Restoring ${customerName}...`);
     
-    const response = await fetch("http://localhost/API/archive.php?action=restore", {
+    const response = await fetch("https://api.lizlyskincare.sbs/archive.php?action=restore", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ archive_id: archiveId })

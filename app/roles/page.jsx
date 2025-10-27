@@ -64,7 +64,7 @@ const [allPermissions, setAllPermissions] = useState([]);
 
 
 useEffect(() => {
-  fetch("http://localhost/API/permissions.php")
+  fetch("https://api.lizlyskincare.sbs/permissions.php")
     .then(res => res.json())
     .then(data => {
       if (data.success) {

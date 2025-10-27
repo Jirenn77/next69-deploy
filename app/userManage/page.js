@@ -198,7 +198,7 @@ export default function UserManagement() {
 
     try {
       const res = await fetch(
-        `https://api.lizlyskincare.sbs/API/users.php?action=update&id=${updatedUser.id}`,
+        `https://api.lizlyskincare.sbs/users.php?action=update&id=${updatedUser.id}`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -260,7 +260,7 @@ export default function UserManagement() {
     // Convert branch_id to integer or null
     const branchId = newUser.branch_id ? parseInt(newUser.branch_id) : null;
 
-    const response = await fetch("https://api.lizlyskincare.sbs/API/users.php", {
+    const response = await fetch("https://api.lizlyskincare.sbs/users.php", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({

@@ -67,7 +67,7 @@ export default function Memberships() {
 
   const fetchMemberships = async () => {
     try {
-      const res = await fetch("http://localhost/API/memberships.php");
+      const res = await fetch("https://api.lizlyskincare.sbs/memberships.php");
       const data = await res.json();
 
       if (Array.isArray(data)) {
@@ -92,7 +92,7 @@ export default function Memberships() {
       console.log(`Fetching premium services for: ${membershipType}`);
 
       const res = await fetch(
-        `http://localhost/API/servicegroup.php?action=premium_services&membership_type=${membershipType}`
+        `https://api.lizlyskincare.sbs/servicegroup.php?action=premium_services&membership_type=${membershipType}`
       );
 
       if (!res.ok) {
@@ -218,7 +218,7 @@ export default function Memberships() {
         duration: 12, // Default duration as shown in your existing records
       };
 
-      const res = await fetch("http://localhost/API/memberships.php", {
+      const res = await fetch("https://api.lizlyskincare.sbs/memberships.php", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(membershipToSend),
@@ -297,7 +297,7 @@ export default function Memberships() {
               : editMembership.discount || "0",
       };
 
-      const res = await fetch(`http://localhost/API/memberships.php`, {
+      const res = await fetch(`https://api.lizlyskincare.sbs/memberships.php`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

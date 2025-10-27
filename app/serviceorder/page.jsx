@@ -453,7 +453,7 @@ export default function ServiceOrderPage() {
   useEffect(() => {
     const fetchBundleServices = async () => {
       try {
-        const response = await fetch("https://api.lizlyskincare.sbs/API/bundles.php");
+        const response = await fetch("https://api.lizlyskincare.sbs/bundles.php");
         if (!response.ok) throw new Error("Failed to fetch bundle services");
 
         const data = await response.json();
@@ -656,7 +656,7 @@ export default function ServiceOrderPage() {
 
     // Get current user data
     const currentUserResponse = await fetch(
-      "https://api.lizlyskincare.sbs/API/branches.php?action=user",
+      "https://api.lizlyskincare.sbs/branches.php?action=user",
       {
         credentials: "include",
       }
@@ -733,7 +733,7 @@ export default function ServiceOrderPage() {
     };
 
     try {
-      const response = await fetch("https://api.lizlyskincare.sbs/API/saveAcquire.php", {
+      const response = await fetch("https://api.lizlyskincare.sbs/saveAcquire.php", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(orderData), // Send the complete orderData
@@ -925,7 +925,7 @@ export default function ServiceOrderPage() {
           body.duration = calculateDuration(membershipForm.validTo);
         }
 
-        const membershipRes = await fetch("https://api.lizlyskincare.sbs/API/members.php", {
+        const membershipRes = await fetch("https://api.lizlyskincare.sbs/members.php", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(body),
@@ -1083,7 +1083,7 @@ export default function ServiceOrderPage() {
       if (!userData) {
         try {
           const currentUserResponse = await fetch(
-            "https://api.lizlyskincare.sbs/API/branches.php?action=user",
+            "https://api.lizlyskincare.sbs/branches.php?action=user",
             {
               credentials: "include",
             }

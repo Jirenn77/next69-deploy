@@ -112,7 +112,7 @@ export default function BranchManagementPage() {
     };
 
     const res = await fetch(
-      `https://api.lizlyskincare.sbs/API/branches.php?action=update&id=${updatedBranch.id}`,
+      `https://api.lizlyskincare.sbs/branches.php?action=update&id=${updatedBranch.id}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },

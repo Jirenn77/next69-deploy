@@ -103,7 +103,7 @@ export default function ServiceGroupsPage() {
       try {
         setLoading(true);
         const response = await fetch(
-          "http://localhost/API/servicegroup.php?action=get_groups_with_services"
+          "https://api.lizlyskincare.sbs/servicegroup.php?action=get_groups_with_services"
         );
         if (!response.ok) {
           throw new Error("Failed to fetch service groups");
@@ -143,7 +143,7 @@ export default function ServiceGroupsPage() {
     try {
       setLoading(true);
       const response = await fetch(
-        "http://localhost/API/servicegroup.php?action=all_services"
+        "https://api.lizlyskincare.sbs/servicegroup.php?action=all_services"
       );
       if (!response.ok) {
         throw new Error("Failed to fetch services");
@@ -176,7 +176,7 @@ export default function ServiceGroupsPage() {
 
     try {
       const response = await fetch(
-        "http://localhost/API/servicegroup.php?action=save_group",
+        "https://api.lizlyskincare.sbs/servicegroup.php?action=save_group",
         {
           method: "POST",
           headers: {
@@ -222,7 +222,7 @@ export default function ServiceGroupsPage() {
   const handleSaveEditedService = async () => {
     try {
       const response = await axios.post(
-        "http://localhost/API/servicegroup.php?action=update_service",
+        "https://api.lizlyskincare.sbs/servicegroup.php?action=update_service",
         {
           id: serviceToEdit.service_id, // ✅ map correctly
           name: serviceToEdit.name,
@@ -356,7 +356,7 @@ export default function ServiceGroupsPage() {
       }
 
       const response = await fetch(
-        `http://localhost/API/servicegroup.php?action=save_group`,
+        `https://api.lizlyskincare.sbs/servicegroup.php?action=save_group`,
         {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
@@ -436,7 +436,7 @@ export default function ServiceGroupsPage() {
       });
 
       const response = await fetch(
-        "http://localhost/API/servicegroup.php?action=add_service",
+        "https://api.lizlyskincare.sbs/servicegroup.php?action=add_service",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },

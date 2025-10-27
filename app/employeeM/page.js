@@ -63,7 +63,7 @@ export default function EmployeeManagement() {
     try {
       setIsLoading(true);
       // Replace with your actual API endpoint
-      const response = await fetch("https://api.lizlyskincare.sbs/API/employees.php");
+      const response = await fetch("https://api.lizlyskincare.sbs/employees.php");
       if (!response.ok) throw new Error("Failed to fetch employees");
       const data = await response.json();
       setEmployees(data);
@@ -78,7 +78,7 @@ export default function EmployeeManagement() {
   const fetchEmployeeDetails = async (employeeId) => {
     try {
       const res = await fetch(
-        `http://localhost/API/employees.php?id=${employeeId}`
+        `https://api.lizlyskincare.sbs/employees.php?id=${employeeId}`
       );
       const data = await res.json();
       setSelectedEmployee(data);
@@ -95,7 +95,7 @@ export default function EmployeeManagement() {
   const handleSaveEdit = async (updatedEmployee) => {
     try {
       const res = await fetch(
-        `http://localhost/API/employees.php?action=update&id=${updatedEmployee.id}`,
+        `https://api.lizlyskincare.sbs/employees.php?action=update&id=${updatedEmployee.id}`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -125,7 +125,7 @@ export default function EmployeeManagement() {
 
     try {
       const res = await fetch(
-        `http://localhost/API/employees.php?action=delete&id=${employeeId}`,
+        `https://api.lizlyskincare.sbs/employees.php?action=delete&id=${employeeId}`,
         {
           method: "DELETE",
         }
@@ -154,7 +154,7 @@ export default function EmployeeManagement() {
         return;
       }
 
-      const response = await fetch("http://localhost/API/employees.php?action=add", {
+      const response = await fetch("https://api.lizlyskincare.sbs/employees.php?action=add", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(newEmployee),
