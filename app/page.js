@@ -18,8 +18,6 @@ import "./globals.css";
 export default function Login() {
   const [identifier, setIdentifier] = useState(""); // This will handle both email and username
   const [password, setPassword] = useState("");
-  const [branches, setBranches] = useState([]);
-  const [selectedBranchId, setSelectedBranchId] = useState("");
   const [captcha, setCaptcha] = useState("");
   const [captchaQuestion, setCaptchaQuestion] = useState("");
   const [correctCaptchaAnswer, setCorrectCaptchaAnswer] = useState(0);
@@ -51,7 +49,6 @@ export default function Login() {
 
   useEffect(() => {
     generateCaptcha();
-    fetchBranches();
 
     // Add global keydown listener for caps lock detection
     const handleKeyDown = (e) => {
@@ -82,17 +79,6 @@ export default function Login() {
     let num2 = Math.floor(Math.random() * 10);
     setCorrectCaptchaAnswer(num1 + num2);
     setCaptchaQuestion(`${num1} + ${num2} = ?`);
-  };
-
-  const fetchBranches = async () => {
-    try {
-      const res = await fetch(`${API_BASE}/branches.php`);
-      if (!res.ok) throw new Error("Failed to load branches");
-      const data = await res.json();
-      setBranches(data || []);
-    } catch (e) {
-      // Keep silent in UI; login can still work for admin
-    }
   };
 
   // Enhanced caps lock detection for specific inputs
@@ -346,26 +332,15 @@ export default function Login() {
   }
 
   // If we reach here, we need to try receptionist login
-  // RECEPTIONIST LOGIN - Check if branch is selected first
-  if (!selectedBranchId) {
-    toast.error("Please select a branch to continue.");
-    
-    setLoginAttempts((prev) => {
-      const newAttempts = prev + 1;
-      localStorage.setItem("loginAttempts", newAttempts);
-      return newAttempts;
-    });
-    return;
-  }
-
+  // RECEPTIONIST LOGIN - branch will be determined automatically from API
   try {
     // Receptionist login - try with identifier (could be email or username)
+    // Branch ID will be automatically determined from the user's credentials
     const res = await axios.post(
       `${API_BASE}/users.php?action=login`,
       { 
         identifier: sanitizedIdentifier, 
-        password, 
-        branch_id: selectedBranchId 
+        password
       },
       { withCredentials: true }
     );
@@ -374,14 +349,6 @@ export default function Login() {
       toast.success("Receptionist login successful!");
       
       try {
-        const branch = branches.find((b) => String(b.id) === String(selectedBranchId));
-        if (branch) {
-          localStorage.setItem("branch_id", String(branch.id));
-          localStorage.setItem("branch_name", branch.name);
-        } else {
-          localStorage.setItem("branch_id", String(selectedBranchId));
-        }
-        
         const userData = res.data?.user || res.data;
         const receptionistUserData = {
           id: userData.user_id || userData.id,
@@ -389,11 +356,19 @@ export default function Login() {
           username: userData.username,
           email: userData.email,
           role: 'receptionist',
-          branch: userData.branch || branch?.name,
-          branch_id: userData.branch_id || selectedBranchId,
-          branch_name: userData.branch_name || branch?.name,
+          branch: userData.branch_name || userData.branch,
+          branch_id: userData.branch_id,
+          branch_name: userData.branch_name || userData.branch,
           status: userData.status || 'Active'
         };
+        
+        // Store branch info
+        if (userData.branch_id) {
+          localStorage.setItem("branch_id", String(userData.branch_id));
+        }
+        if (userData.branch_name || userData.branch) {
+          localStorage.setItem("branch_name", userData.branch_name || userData.branch);
+        }
         
       localStorage.setItem("user", JSON.stringify(receptionistUserData));
       localStorage.setItem("loginAttempts", "0");
@@ -405,11 +380,7 @@ export default function Login() {
       // Use window.location.replace to completely remove login page from history
       window.location.replace("/home2");
     } else {
-      if (res.data.code === 'BRANCH_MISMATCH') {
-        toast.error("User not assigned to this branch. Please select the correct branch.");
-      } else {
-        toast.error("Invalid email/username or password. Please check your credentials.");
-      }
+      toast.error(res.data.error || "Invalid email/username or password. Please check your credentials.");
       
       setLoginAttempts((prev) => {
         const newAttempts = prev + 1;
@@ -420,11 +391,7 @@ export default function Login() {
   } catch (err) {
     if (err.response && err.response.data) {
       const errorData = err.response.data;
-      if (errorData.code === 'BRANCH_MISMATCH') {
-        toast.error("User not assigned to this branch. Please select the correct branch.");
-      } else {
-        toast.error("Invalid email/username or password. Please check your credentials.");
-      }
+      toast.error(errorData.error || "Invalid email/username or password. Please check your credentials.");
     } else {
       toast.error("An error occurred. Please try again.");
     }
@@ -480,26 +447,6 @@ export default function Login() {
             Sign In
           </h2>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-white mb-1">
-                Branch (required for receptionist)
-              </label>
-              <select
-                value={selectedBranchId}
-                onChange={(e) => setSelectedBranchId(e.target.value)}
-                className="w-full px-4 py-2.5 rounded-lg bg-white/20 border border-white/30 focus:ring-2 focus:ring-lime-400 focus:border-lime-400 text-white"
-              >
-                <option value="" className="text-black">
-                  Select a branch
-                </option>
-                {branches.map((b) => (
-                  <option key={b.id} value={b.id} className="text-black">
-                    {b.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
             <div>
               <label
                 htmlFor="identifier"
