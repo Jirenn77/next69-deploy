@@ -78,6 +78,9 @@ export default function Dashboard() {
     revenueDistribution: [],
     loading: true,
   });
+  
+  const [previousPeriodData, setPreviousPeriodData] = useState(null);
+  const [trendingData, setTrendingData] = useState({ percentage: 0, direction: 'up' });
 
   const [branchData, setBranchData] = useState({
     topServices: [],
@@ -101,6 +104,76 @@ export default function Dashboard() {
   useEffect(() => {
     fetchBranches();
   }, []);
+
+  // Function to calculate trending based on previous period
+  const calculateTrending = async (currentRevenue) => {
+    try {
+      // Calculate previous period dates
+      const today = new Date();
+      let startDate, endDate;
+
+      if (period === "day") {
+        // Previous day
+        startDate = new Date(today);
+        startDate.setDate(today.getDate() - 1);
+        endDate = new Date(startDate);
+      } else if (period === "week") {
+        // Previous week
+        const day = today.getDay();
+        const diff = today.getDate() - day + (day === 0 ? -6 : 1);
+        const startOfThisWeek = new Date(today.getFullYear(), today.getMonth(), diff - 7);
+        endDate = new Date(startOfThisWeek);
+        endDate.setDate(startOfThisWeek.getDate() + 6);
+        startDate = new Date(startOfThisWeek);
+      } else if (period === "month") {
+        // Previous month
+        startDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+        endDate = new Date(today.getFullYear(), today.getMonth(), 0);
+      } else if (period === "year") {
+        // Previous year
+        startDate = new Date(today.getFullYear() - 1, 0, 1);
+        endDate = new Date(today.getFullYear() - 1, 11, 31);
+      } else {
+        // For custom period, calculate based on the range difference
+        const range = dateRange.end - dateRange.start;
+        endDate = new Date(dateRange.start.getTime() - 1);
+        startDate = new Date(endDate.getTime() - range);
+      }
+
+      const params = new URLSearchParams({
+        action: "dashboard",
+        period: period === "custom" ? "custom" : period,
+      });
+
+      if (period === "custom" || period === "day") {
+        params.append("start_date", startDate.toISOString().slice(0, 10));
+        params.append("end_date", endDate.toISOString().slice(0, 10));
+      }
+
+      const response = await fetch(
+        `https://api.lizlyskincare.sbs/home.php?${params.toString()}`
+      );
+      const data = await response.json();
+      
+      const previousRevenue = data.revenue_distribution?.reduce(
+        (sum, branch) => sum + (branch.revenue || 0),
+        0
+      ) || 0;
+
+      if (previousRevenue > 0) {
+        const percentage = ((currentRevenue - previousRevenue) / previousRevenue) * 100;
+        setTrendingData({
+          percentage: Math.abs(percentage),
+          direction: percentage >= 0 ? 'up' : 'down'
+        });
+      } else {
+        setTrendingData({ percentage: 0, direction: 'up' });
+      }
+    } catch (error) {
+      console.error("Error calculating trending:", error);
+      setTrendingData({ percentage: 0, direction: 'up' });
+    }
+  };
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -134,6 +207,16 @@ export default function Dashboard() {
           revenueDistribution: data.revenue_distribution || [],
           loading: false,
         });
+        
+        // Calculate trending after data is loaded
+        const currentRevenue = data.revenue_distribution?.reduce(
+          (sum, branch) => sum + (branch.revenue || 0),
+          0
+        ) || 0;
+        
+        if (currentRevenue > 0 && !selectedBranch) {
+          calculateTrending(currentRevenue);
+        }
       } catch (error) {
         console.error("Error:", error);
         setDashboardData((prev) => ({ ...prev, loading: false }));
@@ -763,13 +846,18 @@ export default function Dashboard() {
                   </h3>
                 </div>
                 <div className="p-3 bg-emerald-100 rounded-full">
-                  <DollarSign className="text-emerald-600" size={24} />
-                </div>
+  <span className="text-emerald-600 text-2xl font-bold">₱</span>
+</div>
+
               </div>
               <div className="flex items-center mt-4">
-                <TrendingUp className="text-emerald-500 mr-1" size={16} />
-                <span className="text-sm text-emerald-600">
-                  +12.3% from last {period}
+                {trendingData.direction === 'up' ? (
+                  <TrendingUp className="text-emerald-500 mr-1" size={16} />
+                ) : (
+                  <TrendingUp className="text-red-500 mr-1 rotate-180" size={16} />
+                )}
+                <span className={`text-sm ${trendingData.direction === 'up' ? 'text-emerald-600' : 'text-red-600'}`}>
+                  {trendingData.direction === 'up' ? '+' : '-'}{trendingData.percentage.toFixed(1)}% from last {period.charAt(0).toUpperCase() + period.slice(1)}
                 </span>
               </div>
             </motion.div>
