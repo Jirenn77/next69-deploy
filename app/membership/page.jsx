@@ -580,10 +580,10 @@ const handleEdit = async (id) => {
         whileHover={{ y: -2 }}
       >
         <div className="flex justify-between items-start">
-          <h4 className="font-medium text-sm">{service.name}</h4>
-          <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
-            {service.category}
-          </span>
+                            <h4 className="font-medium text-sm">{service.name || "Unnamed Service"}</h4>
+                          <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
+                            {service.category || "Uncategorized"}
+                          </span>
         </div>
         <div className="mt-2 text-xs text-gray-600">
           <div>Duration: {service.duration}</div>
@@ -633,12 +633,6 @@ const handleEdit = async (id) => {
                 exit={{ opacity: 0, y: -10 }}
                 transition={{ duration: 0.2 }}
               >
-                <Link
-                  href="/profiles"
-                  className="flex items-center gap-3 px-4 py-3 hover:bg-gray-100 w-full text-gray-700"
-                >
-                  <User size={16} /> Profile
-                </Link>
                 <Link
                   href="/roles"
                   className="flex items-center gap-3 px-4 py-3 hover:bg-gray-100 w-full text-gray-700"
