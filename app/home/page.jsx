@@ -25,7 +25,6 @@ import {
   Leaf,
   ChevronDown,
   TrendingUp,
-  DollarSign,
   Activity,
   ChevronsLeft,
 } from "lucide-react";
@@ -848,7 +847,6 @@ export default function Dashboard() {
                 <div className="p-3 bg-emerald-100 rounded-full">
   <span className="text-emerald-600 text-2xl font-bold">₱</span>
 </div>
-
               </div>
               <div className="flex items-center mt-4">
                 {trendingData.direction === 'up' ? (
