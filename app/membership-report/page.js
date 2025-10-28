@@ -607,13 +607,23 @@ export default function MembershipExpirationReport() {
   };
 
   const [searchQuery, setSearchQuery] = useState("");
-  const handleSearch = () => {
-    // Implement search functionality here
-    toast.info(`Searching for: ${searchQuery}`);
-    // You can filter the expiringMemberships based on the searchQuery
-    // For now, just log it
-    console.log("Search query:", searchQuery);
-  };
+
+const filteredMemberships = customerMemberships.filter((membership) => {
+  const customer =
+    customers.find((c) => c.id === membership.customer_id) || {};
+  const fullName = `${customer.first_name || ""} ${customer.last_name || ""}`.toLowerCase();
+  const email = (customer.email || "").toLowerCase();
+  const phone = (customer.contact || "").toLowerCase();
+  const type = (membership.type || "").toLowerCase();
+
+  return (
+    fullName.includes(searchQuery.toLowerCase()) ||
+    email.includes(searchQuery.toLowerCase()) ||
+    phone.includes(searchQuery.toLowerCase()) ||
+    type.includes(searchQuery.toLowerCase())
+  );
+});
+
 
   return (
     <div className="flex flex-col h-screen bg-[#77DD77] text-gray-900">
@@ -1155,7 +1165,9 @@ export default function MembershipExpirationReport() {
                               </td>
                             </motion.tr>
                           ) : (
-                            paginatedMemberships.map((membership, index) => {
+                            filteredMemberships
+  .slice((membershipPage - 1) * membershipsPerPage, membershipPage * membershipsPerPage)
+  .map((membership, index) => {
                               const customer =
                                 customers.find(
                                   (c) => c.id === membership.customer_id

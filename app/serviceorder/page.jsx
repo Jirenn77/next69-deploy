@@ -2967,7 +2967,7 @@ export default function ServiceOrderPage() {
                                           <label className="text-sm font-medium text-gray-700">
                                             Quantity:
                                           </label>
-                                          <div className="flex items-center gap-2">
+                                          <div className="flex items-center gap-2 text-gray-900">
                                             <button
                                               onClick={() => {
                                                 const currentQty = bundleQuantities[bundle.id] || 1;
@@ -2978,7 +2978,7 @@ export default function ServiceOrderPage() {
                                                   });
                                                 }
                                               }}
-                                              className="w-8 h-8 flex items-center justify-center bg-white border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                                              className="w-8 h-8 flex items-center justify-center text-gray-900 bg-white border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
                                               disabled={(bundleQuantities[bundle.id] || 1) === 1}
                                             >
                                               -
@@ -2994,7 +2994,7 @@ export default function ServiceOrderPage() {
                                                   [bundle.id]: qty,
                                                 });
                                               }}
-                                              className="w-16 px-2 py-1 text-center border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                              className="w-16 px-2 py-1 text-center border border-gray-300 text-gray-900 rounded focus:outline-none focus:ring-2 focus:ring-purple-500"
                                             />
                                             <button
                                               onClick={() => {
@@ -3004,7 +3004,7 @@ export default function ServiceOrderPage() {
                                                   [bundle.id]: currentQty + 1,
                                                 });
                                               }}
-                                              className="w-8 h-8 flex items-center justify-center bg-white border border-gray-300 rounded hover:bg-gray-100"
+                                              className="w-8 h-8 flex items-center justify-center bg-white border border-gray-300 text-gray-900 rounded hover:bg-gray-100"
                                             >
                                               +
                                             </button>
