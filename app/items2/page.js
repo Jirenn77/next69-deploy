@@ -171,7 +171,7 @@ export default function BeautyDeals() {
     };
 
     fetchCurrentUser();
-  }, []);
+}, []);
 
   useEffect(() => {
     const fetchBundles = async () => {

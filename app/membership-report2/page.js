@@ -1474,7 +1474,6 @@ export default function MembershipExpirationReport() {
                             "Date & Time",
                             "Customer",
                             "Branch",
-                            "Handled By",
                             "Status",
                             "Type",
                             "Amount",
@@ -1540,10 +1539,6 @@ export default function MembershipExpirationReport() {
 
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                   {log.branch_name || "N/A"}
-                                </td>
-
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                  {log.performed_by_name || "N/A"}
                                 </td>
 
                                 <td className="px-6 py-4 whitespace-nowrap">
@@ -1988,22 +1983,6 @@ export default function MembershipExpirationReport() {
                         animate={{ opacity: 1 }}
                         transition={{ delay: 0.4 }}
                       >
-                        {selectedCustomer.membershipData?.length > 0 && (
-                          <motion.button
-                            onClick={() =>
-                              setRenewModalData({
-                                customerId: selectedCustomer.id,
-                                membershipId:
-                                  selectedCustomer.membershipData[0].id,
-                              })
-                            }
-                            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                          >
-                            Renew Membership
-                          </motion.button>
-                        )}
                         <motion.button
                           onClick={() => setIsDetailsOpen(false)}
                           className="px-4 py-2 bg-gray-400 hover:bg-gray-500 text-white rounded-lg"

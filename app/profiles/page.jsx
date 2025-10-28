@@ -572,76 +572,6 @@ export default function ViewProfile() {
                             </p>
                         </div>
 
-
-
-                        <div className="flex space-x-3 mt-4 md:mt-0">
-
-                            {isEditing ? (
-
-                                <>
-
-                                    <motion.button
-
-                                        onClick={() => setIsEditing(false)}
-
-                                        className="flex items-center gap-2 bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-lg"
-
-                                        whileHover={{ scale: 1.05 }}
-
-                                        whileTap={{ scale: 0.95 }}
-
-                                    >
-
-                                        <X size={18} />
-
-                                        <span>Cancel</span>
-
-                                    </motion.button>
-
-                                    <motion.button
-
-                                        onClick={handleSaveClick}
-
-                                        className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg"
-
-                                        whileHover={{ scale: 1.05 }}
-
-                                        whileTap={{ scale: 0.95 }}
-
-                                    >
-
-                                        <Save size={18} />
-
-                                        <span>Save</span>
-
-                                    </motion.button>
-
-                                </>
-
-                            ) : (
-
-                                <motion.button
-
-                                    onClick={handleEditClick}
-
-                                    className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg"
-
-                                    whileHover={{ scale: 1.05 }}
-
-                                    whileTap={{ scale: 0.95 }}
-
-                                >
-
-                                    <Edit size={18} />
-
-                                    <span>Edit Profile</span>
-
-                                </motion.button>
-
-                            )}
-
-                        </div>
-
                     </motion.div>
 
 
@@ -663,20 +593,7 @@ export default function ViewProfile() {
                         <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
 
 
-                            {/* Profile Avatar */}
-                            <div className="flex flex-col items-center md:items-start">
-                                <div className="w-32 h-32 rounded-full bg-emerald-600 flex items-center justify-center text-white text-4xl font-bold mb-4">
-                                    {formData.name ? formData.name.charAt(0).toUpperCase() : "U"}
-                                </div>
-                                <h2 className="text-xl font-bold text-gray-800 text-center md:text-left">
-                                    {formData.name}
-                                </h2>
-                                <p className="text-sm text-gray-600 text-center md:text-left">
-                                    {formData.role === "admin" ? "Administrator" : formData.role === "receptionist" ? "Receptionist" : "User"}
-                                </p>
-                            </div>
-
-
+      
                             {/* Profile Details */}
 
                             <div className="md:col-span-2 space-y-4">
@@ -838,8 +755,8 @@ export default function ViewProfile() {
                                         <label className="block text-sm font-medium text-gray-700 mb-1">Branch</label>
                                         <div className="flex items-center w-full p-3 bg-gray-50 border border-gray-200 rounded-lg">
                                             <span className="truncate">{formData.branch || "N/A"}</span>
-                                        </div>
-                                            </div>
+                                    </div>
+                                </div>
 
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-1">Created At</label>
@@ -849,7 +766,7 @@ export default function ViewProfile() {
 
                                             {formData.created_at || "N/A"}
                                     </div>
-                                </div>
+                                            </div>
 
                                     </div>
 
@@ -896,9 +813,9 @@ export default function ViewProfile() {
 
                                         )}
 
-                                    </div>
+                                </div>
 
-                                    <div>
+                                <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
                                         <div className="flex items-center w-full p-3 bg-gray-50 border border-gray-200 rounded-lg">
                                             <Shield className="mr-2 text-gray-400" size={16} />

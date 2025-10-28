@@ -363,12 +363,6 @@ const performArchive = async () => {
                 transition={{ duration: 0.2 }}
               >
                 <Link
-                  href="/profiles"
-                  className="flex items-center gap-3 px-4 py-3 hover:bg-gray-100 w-full text-gray-700"
-                >
-                  <User size={16} /> Profile
-                </Link>
-                <Link
                   href="/roles"
                   className="flex items-center gap-3 px-4 py-3 hover:bg-gray-100 w-full text-gray-700"
                 >
