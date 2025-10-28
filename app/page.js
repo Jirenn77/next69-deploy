@@ -101,8 +101,14 @@ export default function Login() {
 
   // SIMPLIFIED VALIDATION - Only basic checks, let backend handle the rest
   const sanitizeInput = (input) => {
-    // Only remove truly dangerous characters, not all special characters
-    return input.replace(/[<>'";(){}]/g, "").trim();
+    const sanitized = input.replace(/[<>'";(){}]/g, "").trim();
+    
+    // If it looks like an email, convert to lowercase
+    if (isValidEmail(sanitized)) {
+      return sanitized.toLowerCase();
+    }
+    
+    return sanitized;
   };
 
   const isValidEmail = (email) => {
@@ -117,8 +123,12 @@ export default function Login() {
         message: "Please enter your email or username.",
       };
     }
-
-    // Allow any input - let backend determine if it's valid
+  
+    // For emails, convert to lowercase; usernames remain as-is for case sensitivity
+    if (isValidEmail(identifier)) {
+      setIdentifier(identifier.toLowerCase());
+    }
+  
     return { isValid: true };
   };
 
@@ -432,7 +442,6 @@ export default function Login() {
               />
               <div className="text-xs text-yellow-100">
                 <p className="font-semibold">Security Notice:</p>
-                <p>• Email addresses are case-sensitive</p>
                 <p>• Usernames are case-sensitive</p>
                 <p>• Passwords are case-sensitive</p>
                 <p>• Check Caps Lock before entering credentials</p>
