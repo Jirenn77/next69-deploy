@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, Fragment } from "react";
+import React, { useState, useEffect, Fragment, useCallback } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { Toaster, toast } from "sonner";
@@ -170,6 +170,87 @@ export default function ServiceOrderPage() {
     consumable: 5000,
     paymentMethod: "Cash",
   });
+
+  // Function to detect if selected services form a complete bundle
+  const detectBundleFromSelectedServices = useCallback(() => {
+    if (!bundles.length || !bundleServiceMap) return;
+
+    // Create a set of currently selected service IDs for quick lookup
+    const selectedServiceIds = new Set(selectedServices.map((s) => s.id));
+
+    // Track if any bundle was detected to prevent multiple toasts
+    let hasDetected = false;
+
+    // Check each bundle
+    for (const bundle of bundles) {
+      if (!bundleServiceMap[bundle.id] || hasDetected) continue;
+
+      const bundleServices = bundleServiceMap[bundle.id];
+
+      // Check if all services from this bundle are in the selected services
+      const allBundleServicesSelected = bundleServices.every((service) =>
+        selectedServiceIds.has(service.service_id || service.id)
+      );
+
+      // Check if the selected services match exactly (no extra services from this bundle)
+      const selectedServicesFromThisBundle = bundleServices.filter((service) =>
+        selectedServiceIds.has(service.service_id || service.id)
+      );
+
+      if (
+        allBundleServicesSelected &&
+        bundleServices.length > 0 &&
+        selectedServicesFromThisBundle.length === bundleServices.length
+      ) {
+        // Check if this bundle is not already applied
+        const hasBundleAlready = selectedServices.some(
+          (s) => s.bundleId === bundle.id
+        );
+
+        if (!hasBundleAlready) {
+          // Convert individual services to bundle format
+          const bundleServicesToAdd = bundleServices.map((service) => ({
+            id: service.service_id || service.id,
+            name: service.name,
+            category: service.category,
+            price: parseFloat(bundle.price) / bundleServices.length,
+            originalPrice: parseFloat(service.price || service.originalPrice),
+            quantity: 1,
+            isFromBundle: true,
+            bundleId: bundle.id,
+            bundleName: bundle.name,
+          }));
+
+          // Remove individual services that make up this bundle
+          setSelectedServices((prev) => {
+            const bundleServiceIds = new Set(
+              bundleServices.map((s) => s.service_id || s.id)
+            );
+
+            const filteredServices = prev.filter(
+              (s) => !bundleServiceIds.has(s.id) || s.bundleId === bundle.id
+            );
+
+            return [...filteredServices, ...bundleServicesToAdd];
+          });
+
+          toast.info(`Complete bundle detected: "${bundle.name}" added!`);
+          hasDetected = true;
+        }
+      }
+    }
+  }, [bundles, bundleServiceMap, selectedServices]);
+
+  // Watch for changes in selected services to detect bundles
+  useEffect(() => {
+    // Only detect if we have services selected and no bundles are already in the selection
+    const hasBundles = selectedServices.some((s) => s.isFromBundle);
+    const hasNoBundles = !hasBundles && selectedServices.length > 0;
+
+    if (hasNoBundles) {
+      detectBundleFromSelectedServices();
+    }
+  }, [selectedServices.length, detectBundleFromSelectedServices]);
 
   useEffect(() => {
     const now = new Date();
