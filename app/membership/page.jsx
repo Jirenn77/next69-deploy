@@ -580,9 +580,9 @@ const handleEdit = async (id) => {
         whileHover={{ y: -2 }}
       >
         <div className="flex justify-between items-start">
-                            <h4 className="font-medium text-sm">{service.name || "Unnamed Service"}</h4>
+                            <h4 className="font-medium text-sm">{service.name}</h4>
                           <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
-                            {service.category || "Uncategorized"}
+                            {service.category}
                           </span>
         </div>
         <div className="mt-2 text-xs text-gray-600">
