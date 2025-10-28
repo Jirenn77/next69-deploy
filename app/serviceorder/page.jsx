@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, Fragment } from "react";
+import React, { useState, useEffect, Fragment, useCallback } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { Toaster, toast } from "sonner";
@@ -142,6 +142,73 @@ export default function ServiceOrderPage() {
   const [promoSearch, setPromoSearch] = useState("");
   const [bundleSearch, setBundleSearch] = useState("");
   const [bundleQuantities, setBundleQuantities] = useState({});
+
+  // Function to detect if selected services form a complete bundle
+  const detectBundleFromSelectedServices = useCallback(() => {
+    if (!bundles.length || !bundleServiceMap || selectedServices.length === 0) return;
+
+    // Skip if any service is already from a bundle or promo
+    const hasBundleOrPromoServices = selectedServices.some(s => s.isFromBundle || s.isFromPromo);
+    if (hasBundleOrPromoServices) return;
+
+    // Check each bundle
+    for (const bundle of bundles) {
+      if (!bundleServiceMap[bundle.id] || bundle.status !== "active") continue;
+
+      const bundleServices = bundleServiceMap[bundle.id];
+      const selectedServiceIds = new Set(selectedServices.map(s => s.id));
+      
+      // Check if all services from this bundle are in the selected services
+      const allBundleServicesSelected = bundleServices.every(service => {
+        const serviceId = service.service_id || service.id;
+        return selectedServiceIds.has(serviceId);
+      });
+
+      if (allBundleServicesSelected && bundleServices.length > 0) {
+        toast.success(`Complete bundle detected: "${bundle.name}". Bundle pricing applied!`);
+        
+        // Remove individual services and add as bundle
+        const servicesToRemove = new Set(bundleServices.map(s => s.service_id || s.id));
+        const updatedServices = selectedServices.filter(s => !servicesToRemove.has(s.id));
+
+        // Add bundle services
+        const bundleServicesToAdd = bundleServices.map(service => ({
+          id: service.service_id || service.id,
+          name: service.name,
+          category: service.category,
+          price: parseFloat(bundle.price) / bundleServices.length,
+          originalPrice: parseFloat(service.price || service.originalPrice),
+          quantity: 1,
+          isFromBundle: true,
+          bundleId: bundle.id,
+          bundleName: bundle.name,
+        }));
+
+        setSelectedServices([...updatedServices, ...bundleServicesToAdd]);
+        return bundle;
+      }
+    }
+
+    return null;
+  }, [selectedServices, bundles, bundleServiceMap]);
+
+  // Call bundle detection when services change (only for new selections, not removals)
+  useEffect(() => {
+    // Only detect if we have services, bundles are loaded, and no bundle services are already selected
+    if (selectedServices.length > 0 && 
+        bundles.length > 0 && 
+        Object.keys(bundleServiceMap).length > 0 &&
+        !selectedServices.some(s => s.isFromBundle || s.isFromPromo)) {
+      
+      // Use setTimeout to avoid state update conflicts
+      const timer = setTimeout(() => {
+        detectBundleFromSelectedServices();
+      }, 100);
+
+      return () => clearTimeout(timer);
+    }
+  }, [selectedServices.length, detectBundleFromSelectedServices]);
+
   const [newCustomer, setNewCustomer] = useState({
     name: "",
     contact: "",
