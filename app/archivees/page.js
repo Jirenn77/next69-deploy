@@ -994,37 +994,9 @@ export default function ArchivePage() {
               className="pl-10 pr-4 py-2 rounded-lg bg-white/90 text-gray-800 w-full focus:outline-none focus:ring-2 focus:ring-emerald-500"
             />
           </div>
-
-          {/* Status Filter for Service Groups and Services */}
-          {(activeTab === "service-groups" || activeTab === "services") && (
-            <div className="flex items-center space-x-2">
-              <select
-                value={filterStatus}
-                onChange={(e) => {
-                  setFilterStatus(e.target.value);
-                  setCurrentPage(1);
-                }}
-                className="pl-3 pr-8 py-2 rounded-lg bg-white/90 text-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              >
-                <option value="all">All Status</option>
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-              </select>
-            </div>
-          )}
         </div>
 
         <div className="flex items-center space-x-4 relative">
-          <motion.button
-            onClick={handleRunArchive}
-            className="flex items-center space-x-2 bg-amber-600 hover:bg-amber-700 text-white py-2.5 px-4 rounded-lg transition-colors font-medium shadow-md hover:shadow-lg"
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-          >
-            <Archive size={18} />
-            <span>Run Archive</span>
-          </motion.button>
-
           <div
             className="w-10 h-10 rounded-full bg-amber-500 flex items-center justify-center text-lg font-bold cursor-pointer hover:bg-amber-600 transition-colors"
             onClick={() => setIsProfileOpen(!isProfileOpen)}
@@ -1145,7 +1117,7 @@ export default function ArchivePage() {
                 >
                   <Archive size={18} />
                 </div>
-                <span>Customer Archive</span>
+                <span>Archives</span>
                 {pathname === "/archive" && (
                   <motion.div
                     className="ml-auto w-2 h-2 bg-white rounded-full"
@@ -1222,9 +1194,19 @@ export default function ArchivePage() {
             className="flex justify-between items-center mb-6"
           >
             <h1 className="text-2xl font-bold text-gray-800">
-              Archive Management
+              Archives
             </h1>
           </motion.div>
+
+          <motion.button
+            onClick={handleRunArchive}
+            className="flex items-center space-x-2 bg-amber-600 hover:bg-amber-700 text-white py-2.5 px-4 rounded-lg transition-colors font-medium shadow-md hover:shadow-lg"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            <Archive size={18} />
+            <span>Run Archive</span>
+          </motion.button>
 
           {/* Tabs Navigation */}
           <div className="mb-6 border-b border-gray-200">

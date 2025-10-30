@@ -36,7 +36,7 @@ import {
   Edit2,
   X,
   Moon,
-  Sun,
+  Archive,
   Search,
   ChevronLeft,
   ChevronRight,
@@ -645,6 +645,19 @@ export default function ServiceGroupsPage() {
                   >
                     <Edit size={16} />
                   </motion.button>
+
+                   <motion.button
+      onClick={(e) => {
+        e.stopPropagation();
+        handleArchiveService(service.service_id, service.name);
+      }}
+      className="text-amber-600 hover:text-amber-800 p-1.5 rounded-md hover:bg-amber-100 transition-colors"
+      whileHover={{ scale: 1.2 }}
+      whileTap={{ scale: 0.9 }}
+      title="Archive Service"
+    >
+      <Archive size={16} />
+    </motion.button>
                 </div>
               </td>
             </motion.tr>
@@ -825,6 +838,19 @@ export default function ServiceGroupsPage() {
                   >
                     <Eye size={16} />
                   </motion.button>
+                  
+                  <motion.button
+      onClick={(e) => {
+        e.stopPropagation();
+        handleArchiveServiceGroup(group.group_id, group.group_name);
+      }}
+      className="text-amber-600 hover:text-amber-800 p-1.5 rounded-md hover:bg-amber-100 transition-colors"
+      whileHover={{ scale: 1.2 }}
+      whileTap={{ scale: 0.9 }}
+      title="Archive Service Group"
+    >
+      <Archive size={16} />
+    </motion.button>
                 </div>
               </td>
             </motion.tr>
