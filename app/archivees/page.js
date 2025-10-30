@@ -1190,53 +1190,59 @@ export default function ArchivePage() {
           </motion.div>
 
           {/* Tabs Navigation */}
-          <div className="mb-6 border-b border-gray-200">
-            <nav className="-mb-px flex space-x-8">
-              {[
-                { id: "customers", name: "Customers", icon: Users },
-                { id: "service-groups", name: "Service Groups", icon: Layers },
-                { id: "services", name: "Services", icon: Package },
-              ].map((tab) => {
-                const Icon = tab.icon;
-                return (
-                  <button
-                    key={tab.id}
-                    onClick={() => {
-                      setActiveTab(tab.id);
-                      setCurrentPage(1);
-                      setSelectedItem(null);
-                    }}
-                    className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${
-                      activeTab === tab.id
-                        ? "border-emerald-500 text-emerald-600"
-                        : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                    }`}
-                  >
-                    <Icon size={18} />
-                    {tab.name}
-                    <span
-                      className={`ml-2 px-2 py-1 text-xs rounded-full ${
-                        activeTab === tab.id
-                          ? "bg-emerald-100 text-emerald-800"
-                          : "bg-gray-100 text-gray-600"
-                      }`}
-                    >
-                      {stats[tab.id.replace("-", "")]}
-                    </span>
-                  </button>
-                );
-              })}
-            </nav>
-            <motion.button
-            onClick={handleRunArchive}
-            className="flex items-center space-x-2 bg-amber-600 hover:bg-amber-700 text-white py-2.5 px-4 rounded-lg transition-colors font-medium shadow-md hover:shadow-lg"
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
+<div className="mb-6 border-b border-gray-200">
+  <div className="flex items-end justify-between">
+    {/* Left: Tabs */}
+    <nav className="-mb-px flex space-x-8">
+      {[
+        { id: "customers", name: "Customers", icon: Users },
+        { id: "service-groups", name: "Service Groups", icon: Layers },
+        { id: "services", name: "Services", icon: Package },
+      ].map((tab) => {
+        const Icon = tab.icon;
+        return (
+          <button
+            key={tab.id}
+            onClick={() => {
+              setActiveTab(tab.id);
+              setCurrentPage(1);
+              setSelectedItem(null);
+            }}
+            className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${
+              activeTab === tab.id
+                ? "border-emerald-500 text-emerald-600"
+                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+            }`}
           >
-            <Archive size={18} />
-            <span>Run Archive</span>
-          </motion.button>  
-          </div>
+            <Icon size={18} />
+            {tab.name}
+            <span
+              className={`ml-2 px-2 py-1 text-xs rounded-full ${
+                activeTab === tab.id
+                  ? "bg-emerald-100 text-emerald-800"
+                  : "bg-gray-100 text-gray-600"
+              }`}
+            >
+              {stats[tab.id.replace("-", "")]}
+            </span>
+          </button>
+        );
+      })}
+    </nav>
+
+    {/* Right: Run Archive button */}
+    <motion.button
+      onClick={handleRunArchive}
+      aria-label="Run Archive"
+      className="ml-4 self-end flex items-center space-x-2 bg-amber-600 hover:bg-amber-700 text-white py-2.5 px-4 rounded-lg transition-colors font-medium shadow-md hover:shadow-lg"
+      whileHover={{ scale: 1.05 }}
+      whileTap={{ scale: 0.95 }}
+    >
+      <Archive size={18} />
+      <span>Run Archive</span>
+    </motion.button>
+  </div>
+</div>
 
           {/* Stats Overview */}
           <motion.div
