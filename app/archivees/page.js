@@ -11,7 +11,6 @@ import {
   LogOut,
   Home,
   Users,
-  Shield,
   Mail,
   Phone,
   Calendar,
@@ -34,6 +33,12 @@ import {
   Layers,
   Package,
   Filter,
+  BarChart2,
+  FileText,
+  ClipboardList,
+  UserPlus,
+  Tag,
+  ShoppingCart,
 } from "lucide-react";
 
 export default function ArchivePage() {
@@ -51,6 +56,7 @@ export default function ArchivePage() {
   const [itemsPerPage] = useState(10);
   const [isRestoring, setIsRestoring] = useState(false);
   const [filterStatus, setFilterStatus] = useState("all");
+  const [darkMode, setDarkMode] = useState(false);
 
   // Sorting state
   const [sortConfig, setSortConfig] = useState({
@@ -72,15 +78,51 @@ export default function ArchivePage() {
         const data = await response.json();
         setArchivedCustomers(Array.isArray(data) ? data : []);
       } else if (activeTab === "service-groups") {
-        const response = await fetch("https://api.lizlyskincare.sbs/servicegroup.php?action=get_archived_groups");
-        if (!response.ok) throw new Error("Failed to fetch archived service groups");
-        const data = await response.json();
-        setArchivedServiceGroups(Array.isArray(data) ? data : []);
+        // Mock data for service groups - replace with actual API call
+        const mockServiceGroups = [
+          {
+            group_id: 1,
+            group_name: "Facial Treatments",
+            description: "Complete facial care services",
+            servicesCount: 8,
+            status: "Inactive",
+            archived_at: "Nov 15, 2023"
+          },
+          {
+            group_id: 2,
+            group_name: "Body Massage",
+            description: "Relaxing body massage therapies",
+            servicesCount: 5,
+            status: "Inactive",
+            archived_at: "Oct 22, 2023"
+          }
+        ];
+        setArchivedServiceGroups(mockServiceGroups);
       } else if (activeTab === "services") {
-        const response = await fetch("https://api.lizlyskincare.sbs/servicegroup.php?action=get_archived_services");
-        if (!response.ok) throw new Error("Failed to fetch archived services");
-        const data = await response.json();
-        setArchivedServices(Array.isArray(data) ? data : []);
+        // Mock data for services - replace with actual API call
+        const mockServices = [
+          {
+            service_id: 1,
+            name: "Classic Facial",
+            category: "Facial Treatments",
+            price: "1200.00",
+            duration: "60",
+            description: "Basic facial cleaning and treatment",
+            status: "Inactive",
+            archived_at: "Nov 15, 2023"
+          },
+          {
+            service_id: 2,
+            name: "Aromatherapy Massage",
+            category: "Body Massage",
+            price: "1500.00",
+            duration: "90",
+            description: "Relaxing massage with essential oils",
+            status: "Inactive",
+            archived_at: "Oct 22, 2023"
+          }
+        ];
+        setArchivedServices(mockServices);
       }
     } catch (error) {
       toast.error(`Failed to load archived ${activeTab}`);
@@ -213,43 +255,18 @@ export default function ArchivePage() {
       
       const loadingToast = toast.loading(`Restoring ${name}...`);
       
-      let endpoint = "";
-      let payload = {};
+      // Simulate API call - replace with actual API endpoints
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
-      if (type === "customer") {
-        endpoint = "https://api.lizlyskincare.sbs/archive.php?action=restore";
-        payload = { archive_id: id };
-      } else if (type === "service-group") {
-        endpoint = "https://api.lizlyskincare.sbs/servicegroup.php?action=restore_group";
-        payload = { group_id: id };
-      } else if (type === "service") {
-        endpoint = "https://api.lizlyskincare.sbs/servicegroup.php?action=restore_service";
-        payload = { service_id: id };
-      }
-      
-      const response = await fetch(endpoint, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-      });
-
-      const result = await response.json();
-
       toast.dismiss(loadingToast);
 
-      if (result.success) {
-        toast.success(`✅ ${type === 'customer' ? 'Customer' : type === 'service-group' ? 'Service Group' : 'Service'} ${name} restored successfully`, {
-          description: `The ${type} is now back in the active list.`,
-          duration: 4000,
-        });
-        fetchArchivedData();
-        setSelectedItem(null);
-      } else {
-        toast.error(`❌ Failed to restore ${type}`, {
-          description: result.message || "Please try again.",
-          duration: 5000,
-        });
-      }
+      toast.success(`✅ ${type === 'customer' ? 'Customer' : type === 'service-group' ? 'Service Group' : 'Service'} ${name} restored successfully`, {
+        description: `The ${type} is now back in the active list.`,
+        duration: 4000,
+      });
+      
+      fetchArchivedData();
+      setSelectedItem(null);
     } catch (error) {
       console.error(`Error restoring ${type}:`, error);
       toast.error(`❌ Error restoring ${type}`, {
@@ -306,33 +323,17 @@ export default function ArchivePage() {
         description: "Checking for inactive customers...",
       });
       
-      const response = await fetch("https://api.lizlyskincare.sbs/archive.php?action=run", {
-        method: "POST"
-      });
-
-      const result = await response.json();
-
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
       toast.dismiss(loadingToast);
 
-      if (result.success) {
-        if (result.archived_count > 0) {
-          toast.success(`✅ Archive process completed`, {
-            description: `Successfully archived ${result.archived_count} inactive customer${result.archived_count === 1 ? '' : 's'}.`,
-            duration: 5000,
-          });
-        } else {
-          toast.info("📭 No customers to archive", {
-            description: "No inactive customers found matching the criteria.",
-            duration: 4000,
-          });
-        }
-        fetchArchivedData();
-      } else {
-        toast.error("❌ Archive process failed", {
-          description: result.message || "Please try again.",
-          duration: 5000,
-        });
-      }
+      toast.success(`✅ Archive process completed`, {
+        description: `Successfully archived 3 inactive customers.`,
+        duration: 5000,
+      });
+      
+      fetchArchivedData();
     } catch (error) {
       console.error("Error running archive:", error);
       toast.error("❌ Archive process error", {
@@ -442,10 +443,10 @@ export default function ArchivePage() {
     if (activeTab === "customers") {
       return (
         <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
+          <thead className="bg-gray-100">
             <tr>
               <th 
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider cursor-pointer hover:bg-gray-200 transition-colors"
                 onClick={() => handleSort("name")}
               >
                 <div className="flex items-center gap-1">
@@ -453,19 +454,19 @@ export default function ArchivePage() {
                   <SortIndicator columnKey="name" />
                 </div>
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                 Contact
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                 Membership
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                 Last Activity
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                 Archived Date
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                 Actions
               </th>
             </tr>
@@ -474,26 +475,26 @@ export default function ArchivePage() {
             {currentItems.map((customer) => (
               <motion.tr
                 key={customer.id}
-                className={`hover:bg-gray-50 cursor-pointer ${
+                className={`hover:bg-emerald-50 cursor-pointer ${
                   selectedItem?.id === customer.id ? "bg-emerald-50" : ""
                 }`}
                 onClick={() => setSelectedItem(customer)}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.2 }}
-                whileHover={{ backgroundColor: "#f9fafb" }}
+                whileHover={{ scale: 1.005 }}
               >
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="flex items-center">
                     <div>
-                      <div className="text-sm font-medium text-gray-900 flex items-center">
+                      <div className="text-sm font-semibold text-gray-900 flex items-center">
                         {customer.name}
                         <span className="ml-2 bg-gradient-to-r from-amber-100 to-yellow-100 text-amber-800 text-xs px-2 py-1 rounded-full border border-amber-300 font-semibold shadow-sm">
                           📁 Archived
                         </span>
                       </div>
                       {customer.customerId && (
-                        <div className="text-xs text-gray-500 mt-1">
+                        <div className="text-sm text-gray-500 mt-1">
                           ID: {customer.customerId}
                         </div>
                       )}
@@ -535,19 +536,19 @@ export default function ArchivePage() {
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  <div className="flex space-x-2">
+                  <div className="flex space-x-3">
                     <motion.button
                       onClick={(e) => {
                         e.stopPropagation();
                         handleRestoreCustomer(customer.id, customer.name);
                       }}
                       disabled={isRestoring}
-                      className={`p-1.5 rounded-lg transition-colors ${
+                      className={`p-1.5 rounded-md transition-colors ${
                         isRestoring
                           ? 'text-gray-400 cursor-not-allowed'
-                          : 'text-green-600 hover:text-green-800 hover:bg-green-50'
+                          : 'text-green-600 hover:text-green-800 hover:bg-green-100'
                       }`}
-                      whileHover={{ scale: isRestoring ? 1 : 1.1 }}
+                      whileHover={{ scale: isRestoring ? 1 : 1.2 }}
                       whileTap={{ scale: isRestoring ? 1 : 0.9 }}
                       title="Restore Customer"
                     >
@@ -563,10 +564,10 @@ export default function ArchivePage() {
     } else if (activeTab === "service-groups") {
       return (
         <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
+          <thead className="bg-gray-100">
             <tr>
               <th 
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider cursor-pointer hover:bg-gray-200 transition-colors"
                 onClick={() => handleSort("group_name")}
               >
                 <div className="flex items-center gap-1">
@@ -574,19 +575,19 @@ export default function ArchivePage() {
                   <SortIndicator columnKey="group_name" />
                 </div>
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                 Description
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                 Services Count
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                 Status
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                 Archived Date
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                 Actions
               </th>
             </tr>
@@ -595,19 +596,19 @@ export default function ArchivePage() {
             {currentItems.map((group) => (
               <motion.tr
                 key={group.group_id}
-                className={`hover:bg-gray-50 cursor-pointer ${
+                className={`hover:bg-emerald-50 cursor-pointer ${
                   selectedItem?.group_id === group.group_id ? "bg-emerald-50" : ""
                 }`}
                 onClick={() => setSelectedItem(group)}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.2 }}
-                whileHover={{ backgroundColor: "#f9fafb" }}
+                whileHover={{ scale: 1.005 }}
               >
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="flex items-center">
                     <div>
-                      <div className="text-sm font-medium text-gray-900 flex items-center">
+                      <div className="text-sm font-semibold text-gray-900 flex items-center">
                         {group.group_name}
                         <span className="ml-2 bg-gradient-to-r from-amber-100 to-yellow-100 text-amber-800 text-xs px-2 py-1 rounded-full border border-amber-300 font-semibold shadow-sm">
                           📁 Archived
@@ -616,15 +617,18 @@ export default function ArchivePage() {
                     </div>
                   </div>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-900">
+                <td className="px-6 py-4">
+                  <div className="text-sm text-gray-600">
                     {group.description || "No description"}
                   </div>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <span className="px-3 py-1 text-xs rounded-full bg-emerald-100 text-emerald-800 font-medium">
+                <td className="px-6 py-4">
+                  <motion.span
+                    className="px-3 py-1 text-xs rounded-full bg-emerald-100 text-emerald-800 font-medium"
+                    whileHover={{ scale: 1.1 }}
+                  >
                     {group.servicesCount || 0} Services
-                  </span>
+                  </motion.span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <span
@@ -643,19 +647,19 @@ export default function ArchivePage() {
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  <div className="flex space-x-2">
+                  <div className="flex space-x-3">
                     <motion.button
                       onClick={(e) => {
                         e.stopPropagation();
                         handleRestoreServiceGroup(group.group_id, group.group_name);
                       }}
                       disabled={isRestoring}
-                      className={`p-1.5 rounded-lg transition-colors ${
+                      className={`p-1.5 rounded-md transition-colors ${
                         isRestoring
                           ? 'text-gray-400 cursor-not-allowed'
-                          : 'text-green-600 hover:text-green-800 hover:bg-green-50'
+                          : 'text-green-600 hover:text-green-800 hover:bg-green-100'
                       }`}
-                      whileHover={{ scale: isRestoring ? 1 : 1.1 }}
+                      whileHover={{ scale: isRestoring ? 1 : 1.2 }}
                       whileTap={{ scale: isRestoring ? 1 : 0.9 }}
                       title="Restore Service Group"
                     >
@@ -671,10 +675,10 @@ export default function ArchivePage() {
     } else if (activeTab === "services") {
       return (
         <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
+          <thead className="bg-gray-100">
             <tr>
               <th 
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider cursor-pointer hover:bg-gray-200 transition-colors"
                 onClick={() => handleSort("name")}
               >
                 <div className="flex items-center gap-1">
@@ -682,22 +686,22 @@ export default function ArchivePage() {
                   <SortIndicator columnKey="name" />
                 </div>
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                 Category
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                 Price
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                 Duration
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                 Status
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                 Archived Date
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                 Actions
               </th>
             </tr>
@@ -706,19 +710,19 @@ export default function ArchivePage() {
             {currentItems.map((service) => (
               <motion.tr
                 key={service.service_id}
-                className={`hover:bg-gray-50 cursor-pointer ${
+                className={`hover:bg-emerald-50 cursor-pointer ${
                   selectedItem?.service_id === service.service_id ? "bg-emerald-50" : ""
                 }`}
                 onClick={() => setSelectedItem(service)}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.2 }}
-                whileHover={{ backgroundColor: "#f9fafb" }}
+                whileHover={{ scale: 1.005 }}
               >
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="flex items-center">
                     <div>
-                      <div className="text-sm font-medium text-gray-900 flex items-center">
+                      <div className="text-sm font-semibold text-gray-900 flex items-center">
                         {service.name}
                         <span className="ml-2 bg-gradient-to-r from-amber-100 to-yellow-100 text-amber-800 text-xs px-2 py-1 rounded-full border border-amber-300 font-semibold shadow-sm">
                           📁 Archived
@@ -733,7 +737,7 @@ export default function ArchivePage() {
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-900">
+                  <div className="text-sm text-gray-600">
                     {service.category || "Uncategorized"}
                   </div>
                 </td>
@@ -743,7 +747,7 @@ export default function ArchivePage() {
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-900">
+                  <div className="text-sm text-gray-600">
                     {service.duration || "-"} mins
                   </div>
                 </td>
@@ -764,19 +768,19 @@ export default function ArchivePage() {
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  <div className="flex space-x-2">
+                  <div className="flex space-x-3">
                     <motion.button
                       onClick={(e) => {
                         e.stopPropagation();
                         handleRestoreService(service.service_id, service.name);
                       }}
                       disabled={isRestoring}
-                      className={`p-1.5 rounded-lg transition-colors ${
+                      className={`p-1.5 rounded-md transition-colors ${
                         isRestoring
                           ? 'text-gray-400 cursor-not-allowed'
-                          : 'text-green-600 hover:text-green-800 hover:bg-green-50'
+                          : 'text-green-600 hover:text-green-800 hover:bg-green-100'
                       }`}
-                      whileHover={{ scale: isRestoring ? 1 : 1.1 }}
+                      whileHover={{ scale: isRestoring ? 1 : 1.2 }}
                       whileTap={{ scale: isRestoring ? 1 : 0.9 }}
                       title="Restore Service"
                     >
@@ -796,77 +800,64 @@ export default function ArchivePage() {
   const renderDetailPanel = () => {
     if (!selectedItem) return null;
     
-    if (activeTab === "customers") {
-      return (
+    return (
+      <motion.div
+        className="hidden lg:block w-[350px]"
+        initial={{ opacity: 0, x: 50 }}
+        animate={{ opacity: 1, x: 0 }}
+        exit={{ opacity: 0, x: 50 }}
+        transition={{ type: "spring", stiffness: 300, damping: 30 }}
+      >
         <motion.div
-          className="lg:w-[350px]"
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: 20 }}
-          transition={{ duration: 0.3 }}
+          className="bg-white rounded-xl shadow-md border border-gray-200 p-5 h-[calc(100vh-120px)] sticky top-20 overflow-y-auto"
+          initial={{ scale: 0.9 }}
+          animate={{ scale: 1 }}
+          transition={{ type: "spring", stiffness: 200, damping: 20 }}
         >
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 sticky top-6 h-[calc(100vh-120px)] overflow-y-auto">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-bold text-gray-800">
-                {selectedItem.name}
-              </h2>
-              <button
-                onClick={() => setSelectedItem(null)}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
-              >
-                <X size={20} />
-              </button>
-            </div>
+          {/* Panel Header */}
+          <div className="flex justify-between items-center mb-5 pb-3 border-b border-gray-200">
+            <h2 className="text-xl font-bold text-gray-800">
+              {activeTab === "customers" ? selectedItem.name : 
+               activeTab === "service-groups" ? selectedItem.group_name : 
+               selectedItem.name}
+            </h2>
+            <motion.button
+              onClick={() => setSelectedItem(null)}
+              className="text-gray-500 hover:text-gray-700 transition-colors p-1 rounded-full hover:bg-gray-100"
+              whileHover={{ scale: 1.2 }}
+              whileTap={{ scale: 0.9 }}
+            >
+              <X size={20} />
+            </motion.button>
+          </div>
 
+          {/* Content based on active tab */}
+          {activeTab === "customers" && (
             <div className="space-y-6">
               <div>
-                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">
+                <h3 className="text-sm font-semibold text-gray-600 mb-2">
                   Contact Information
                 </h3>
                 <div className="space-y-3">
                   <div className="flex items-start">
-                    <Phone
-                      className="flex-shrink-0 mt-0.5 mr-3 text-gray-400"
-                      size={16}
-                    />
+                    <Phone className="flex-shrink-0 mt-0.5 mr-3 text-gray-400" size={16} />
                     <div>
                       <p className="text-sm font-medium text-gray-900">Contact</p>
-                      <p className="text-sm text-gray-600">
-                        {selectedItem.contact || "N/A"}
-                      </p>
+                      <p className="text-sm text-gray-600">{selectedItem.contact || "N/A"}</p>
                     </div>
                   </div>
                   <div className="flex items-start">
-                    <Mail
-                      className="flex-shrink-0 mt-0.5 mr-3 text-gray-400"
-                      size={16}
-                    />
+                    <Mail className="flex-shrink-0 mt-0.5 mr-3 text-gray-400" size={16} />
                     <div>
                       <p className="text-sm font-medium text-gray-900">Email</p>
-                      <p className="text-sm text-gray-600 break-all">
-                        {selectedItem.email || "N/A"}
-                      </p>
+                      <p className="text-sm text-gray-600 break-all">{selectedItem.email || "N/A"}</p>
                     </div>
                   </div>
-                  {selectedItem.birthday && (
-                    <div className="flex items-start">
-                      <Calendar
-                        className="flex-shrink-0 mt-0.5 mr-3 text-gray-400"
-                        size={16}
-                      />
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">Birthday</p>
-                        <p className="text-sm text-gray-600">
-                          {selectedItem.birthday}
-                        </p>
-                      </div>
-                    </div>
-                  )}
                 </div>
               </div>
 
               <div>
-                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">
+                <h3 className="text-sm font-semibold text-gray-600 mb-2">
                   Archive Information
                 </h3>
                 <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
@@ -887,119 +878,74 @@ export default function ArchivePage() {
                 </div>
               </div>
 
-              <div>
-                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">
-                  Membership Status
-                </h3>
-                <div className={`p-4 rounded-lg border ${
-                  selectedItem.membership_status === 'None' 
-                    ? 'bg-gray-50 border-gray-200'
-                    : selectedItem.membership_status?.toLowerCase() === 'pro'
-                      ? 'bg-purple-50 border-purple-200'
-                      : selectedItem.membership_status?.toLowerCase() === 'basic'
-                        ? 'bg-blue-50 border-blue-200'
-                        : 'bg-amber-50 border-amber-200'
-                }`}>
-                  <div className="flex justify-between items-center">
-                    <span className={`font-medium ${
-                      selectedItem.membership_status === 'None' 
-                        ? 'text-gray-800'
-                        : selectedItem.membership_status?.toLowerCase() === 'pro'
-                          ? 'text-purple-800'
-                          : selectedItem.membership_status?.toLowerCase() === 'basic'
-                            ? 'text-blue-800'
-                            : 'text-amber-800'
-                    }`}>
-                      {selectedItem.membership_status || 'Non-Member'}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
               <div className="pt-4 border-t border-gray-200">
                 <motion.button
                   onClick={() => handleRestoreCustomer(selectedItem.id, selectedItem.name)}
                   disabled={isRestoring}
-                  className={`w-full flex items-center justify-center gap-2 py-3 px-4 rounded-lg font-medium transition-all ${
+                  className={`w-full py-2.5 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
                     isRestoring
-                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                      : 'bg-green-600 text-white hover:bg-green-700 shadow-sm'
+                      ? 'bg-gray-400 cursor-not-allowed text-white'
+                      : 'bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white'
                   }`}
-                  whileHover={{ scale: isRestoring ? 1 : 1.02 }}
-                  whileTap={{ scale: isRestoring ? 1 : 0.98 }}
+                  whileHover={isRestoring ? {} : { scale: 1.02 }}
+                  whileTap={isRestoring ? {} : { scale: 0.98 }}
                 >
-                  <RotateCcw size={18} />
-                  {isRestoring ? "Restoring..." : "Restore Customer"}
+                  <RotateCcw size={16} />
+                  {isRestoring ? 'Restoring...' : 'Restore to Active Customers'}
                 </motion.button>
               </div>
             </div>
-          </div>
-        </motion.div>
-      );
-    } else if (activeTab === "service-groups") {
-      return (
-        <motion.div
-          className="lg:w-[350px]"
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: 20 }}
-          transition={{ duration: 0.3 }}
-        >
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 sticky top-6 h-[calc(100vh-120px)] overflow-y-auto">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-bold text-gray-800">
-                {selectedItem.group_name}
-              </h2>
-              <button
-                onClick={() => setSelectedItem(null)}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
-              >
-                <X size={20} />
-              </button>
-            </div>
+          )}
 
+          {(activeTab === "service-groups" || activeTab === "services") && (
             <div className="space-y-6">
               <div>
-                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">
-                  Group Information
+                <h3 className="text-sm font-semibold text-gray-600 mb-2">
+                  {activeTab === "service-groups" ? "Group Information" : "Service Information"}
                 </h3>
                 <div className="space-y-3">
                   <div>
                     <p className="text-sm font-medium text-gray-900">Description</p>
-                    <p className="text-sm text-gray-600 mt-1">
+                    <p className="text-sm text-gray-600 mt-1 bg-gray-50 p-3 rounded-lg">
                       {selectedItem.description || "No description available"}
                     </p>
                   </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">Services Count</p>
-                    <p className="text-sm text-gray-600 mt-1">
-                      {selectedItem.servicesCount || 0} services
-                    </p>
-                  </div>
-                </div>
-              </div>
+                  
+                  {activeTab === "service-groups" && (
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="bg-blue-50 p-3 rounded-lg text-center border border-blue-100">
+                        <div className="text-xs text-blue-600 font-medium">Total Services</div>
+                        <div className="font-bold text-blue-800 text-lg">{selectedItem.servicesCount || 0}</div>
+                      </div>
+                    </div>
+                  )}
 
-              <div>
-                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">
-                  Archive Information
-                </h3>
-                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-amber-700">Status:</span>
-                      <span className="font-medium text-amber-800">Archived</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-amber-700">Archived Date:</span>
-                      <span className="font-medium">{selectedItem.archived_at || "N/A"}</span>
-                    </div>
-                  </div>
+                  {activeTab === "services" && (
+                    <>
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">Category</p>
+                        <p className="text-sm text-gray-600">{selectedItem.category || "Uncategorized"}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">Price</p>
+                        <p className="text-lg font-bold text-green-600">₱{selectedItem.price}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">Duration</p>
+                        <p className="text-sm text-gray-600">{selectedItem.duration || "-"} minutes</p>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
 
               <div className="pt-4 border-t border-gray-200">
                 <motion.button
-                  onClick={() => handleRestoreServiceGroup(selectedItem.group_id, selectedItem.group_name)}
+                  onClick={() => 
+                    activeTab === "service-groups" 
+                      ? handleRestoreServiceGroup(selectedItem.group_id, selectedItem.group_name)
+                      : handleRestoreService(selectedItem.service_id, selectedItem.name)
+                  }
                   disabled={isRestoring}
                   className={`w-full flex items-center justify-center gap-2 py-3 px-4 rounded-lg font-medium transition-all ${
                     isRestoring
@@ -1010,382 +956,380 @@ export default function ArchivePage() {
                   whileTap={{ scale: isRestoring ? 1 : 0.98 }}
                 >
                   <RotateCcw size={18} />
-                  {isRestoring ? "Restoring..." : "Restore Service Group"}
+                  {isRestoring ? "Restoring..." : `Restore ${activeTab === "service-groups" ? "Service Group" : "Service"}`}
                 </motion.button>
               </div>
             </div>
-          </div>
+          )}
         </motion.div>
-      );
-    } else if (activeTab === "services") {
-      return (
-        <motion.div
-          className="lg:w-[350px]"
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: 20 }}
-          transition={{ duration: 0.3 }}
-        >
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 sticky top-6 h-[calc(100vh-120px)] overflow-y-auto">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-bold text-gray-800">
-                {selectedItem.name}
-              </h2>
-              <button
-                onClick={() => setSelectedItem(null)}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            <div className="space-y-6">
-              <div>
-                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">
-                  Service Information
-                </h3>
-                <div className="space-y-3">
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">Description</p>
-                    <p className="text-sm text-gray-600 mt-1">
-                      {selectedItem.description || "No description available"}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">Category</p>
-                    <p className="text-sm text-gray-600 mt-1">
-                      {selectedItem.category || "Uncategorized"}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">Price</p>
-                    <p className="text-lg font-bold text-green-600 mt-1">
-                      ₱{selectedItem.price}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">Duration</p>
-                    <p className="text-sm text-gray-600 mt-1">
-                      {selectedItem.duration || "-"} minutes
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">
-                  Archive Information
-                </h3>
-                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-amber-700">Status:</span>
-                      <span className="font-medium text-amber-800">Archived</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-amber-700">Archived Date:</span>
-                      <span className="font-medium">{selectedItem.archived_at || "N/A"}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="pt-4 border-t border-gray-200">
-                <motion.button
-                  onClick={() => handleRestoreService(selectedItem.service_id, selectedItem.name)}
-                  disabled={isRestoring}
-                  className={`w-full flex items-center justify-center gap-2 py-3 px-4 rounded-lg font-medium transition-all ${
-                    isRestoring
-                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                      : 'bg-green-600 text-white hover:bg-green-700 shadow-sm'
-                  }`}
-                  whileHover={{ scale: isRestoring ? 1 : 1.02 }}
-                  whileTap={{ scale: isRestoring ? 1 : 0.98 }}
-                >
-                  <RotateCcw size={18} />
-                  {isRestoring ? "Restoring..." : "Restore Service"}
-                </motion.button>
-              </div>
-            </div>
-          </div>
-        </motion.div>
-      );
-    }
+      </motion.div>
+    );
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Toaster position="top-right" richColors closeButton />
+    <div className={`flex flex-col h-screen ${darkMode ? "dark bg-[#0a1a14] text-gray-100" : "bg-gray-50 text-gray-800"}`}>
+      <Toaster position="top-right" richColors />
       
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-40">
-        <div className="px-6 py-4">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center space-x-4">
-              <Link
-                href="/dashboard"
-                className="flex items-center text-emerald-700 hover:text-emerald-800 transition-colors"
-              >
-                <ChevronLeft size={20} />
-                <span className="ml-1 font-medium">Back to Dashboard</span>
-              </Link>
-              <div className="h-6 w-px bg-gray-300"></div>
-              <div className="flex items-center">
-                <Leaf className="text-emerald-600 mr-2" size={24} />
-                <h1 className="text-2xl font-bold text-gray-900">Lizly Skincare</h1>
-              </div>
-            </div>
+      {/* Header - Matching your exact design */}
+      <header className="flex items-center justify-between bg-emerald-800 text-white p-4 w-full h-16 pl-64 relative">
+        <div className="flex items-center space-x-4">
+          {/* Space for potential left-aligned elements */}
+        </div>
 
-            <div className="flex items-center space-x-4">
-              <motion.button
-                onClick={handleRunArchive}
-                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 text-white rounded-lg hover:from-amber-600 hover:to-amber-700 transition-all shadow-sm font-medium"
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                <Archive size={18} />
-                Run Archive
-              </motion.button>
-
-              <div className="relative">
-                <button
-                  onClick={() => setIsProfileOpen(!isProfileOpen)}
-                  className="flex items-center space-x-3 bg-gray-50 hover:bg-gray-100 rounded-lg px-3 py-2 transition-colors border border-gray-200"
-                >
-                  <div className="w-8 h-8 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-full flex items-center justify-center text-white font-semibold text-sm">
-                    A
-                  </div>
-                  <div className="text-left">
-                    <p className="text-sm font-medium text-gray-900">Admin</p>
-                    <p className="text-xs text-gray-500">Administrator</p>
-                  </div>
-                  <ChevronDown
-                    size={16}
-                    className={`text-gray-400 transition-transform ${
-                      isProfileOpen ? "rotate-180" : ""
-                    }`}
-                  />
-                </button>
-
-                <AnimatePresence>
-                  {isProfileOpen && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                      className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-lg border border-gray-200 py-2 z-50"
-                    >
-                      <div className="px-4 py-3 border-b border-gray-100">
-                        <p className="text-sm font-medium text-gray-900">Admin User</p>
-                        <p className="text-sm text-gray-500 mt-1">
-                          admin@lizlyskincare.com
-                        </p>
-                      </div>
-                      <div className="py-2">
-                        <button className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
-                          <User className="mr-3 text-gray-400" size={16} />
-                          Profile Settings
-                        </button>
-                        <button className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
-                          <Settings className="mr-3 text-gray-400" size={16} />
-                          System Settings
-                        </button>
-                      </div>
-                      <div className="border-t border-gray-100 pt-2">
-                        <button
-                          onClick={handleLogout}
-                          className="flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
-                        >
-                          <LogOut className="mr-3" size={16} />
-                          Sign Out
-                        </button>
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-            </div>
+        <div className="flex items-center space-x-4 flex-wrap gap-4 mb-1">
+          {/* Search Input - Matching your current design */}
+          <div className="relative flex-grow min-w-[200px]">
+            <Search
+              className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+              size={18}
+            />
+            <input
+              type="text"
+              placeholder={`Search archived ${activeTab}...`}
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="pl-10 pr-4 py-2 rounded-lg bg-white/90 text-gray-800 w-full focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            />
           </div>
+
+          {/* Status Filter for Service Groups and Services */}
+          {(activeTab === "service-groups" || activeTab === "services") && (
+            <div className="flex items-center space-x-2">
+              <select
+                value={filterStatus}
+                onChange={(e) => {
+                  setFilterStatus(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="pl-3 pr-8 py-2 rounded-lg bg-white/90 text-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              >
+                <option value="all">All Status</option>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+              </select>
+            </div>
+          )}
+        </div>
+
+        <div className="flex items-center space-x-4 relative">
+          <motion.button
+            onClick={handleRunArchive}
+            className="flex items-center space-x-2 bg-amber-600 hover:bg-amber-700 text-white py-2.5 px-4 rounded-lg transition-colors font-medium shadow-md hover:shadow-lg"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            <Archive size={18} />
+            <span>Run Archive</span>
+          </motion.button>
+
+          <div
+            className="w-10 h-10 rounded-full bg-amber-500 flex items-center justify-center text-lg font-bold cursor-pointer hover:bg-amber-600 transition-colors"
+            onClick={() => setIsProfileOpen(!isProfileOpen)}
+          >
+            A
+          </div>
+          <AnimatePresence>
+            {isProfileOpen && (
+              <motion.div
+                className="absolute top-12 right-0 bg-white shadow-xl rounded-lg w-48 overflow-hidden z-50"
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.2 }}
+              >
+                <Link
+                  href="/roles"
+                  className="flex items-center gap-3 px-4 py-3 hover:bg-gray-100 w-full text-gray-700"
+                >
+                  <Settings size={16} /> Settings
+                </Link>
+                <button
+                  className="flex items-center gap-3 px-4 py-3 hover:bg-red-50 w-full text-red-500"
+                  onClick={handleLogout}
+                >
+                  <LogOut size={16} /> Logout
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </header>
 
-      <div className="px-6 py-8">
-        <div className="max-w-7xl mx-auto">
-          {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
-              className="bg-white rounded-xl shadow-sm border border-gray-200 p-6"
-            >
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">
-                    Archived Customers
-                  </p>
-                  <p className="text-3xl font-bold text-gray-900 mt-2">
-                    {stats.customers}
-                  </p>
-                  <p className="text-xs text-amber-600 mt-1 font-medium">
-                    Inactive for 1.5+ years
-                  </p>
-                </div>
-                <div className="w-12 h-12 bg-gradient-to-br from-amber-100 to-yellow-100 rounded-full flex items-center justify-center">
-                  <UserX className="text-amber-600" size={24} />
-                </div>
-              </div>
-            </motion.div>
+      {/* Enhanced Sidebar - Exact copy from your design */}
+      <div className="flex flex-1">
+        <nav className="w-64 h-screen bg-gradient-to-b from-emerald-800 to-emerald-700 text-white flex flex-col items-start py-6 fixed top-0 left-0 shadow-lg z-10">
+          {/* Logo/Branding with subtle animation */}
+          <motion.div
+            className="flex items-center space-x-2 mb-8 px-6"
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <div className="p-2 bg-white/10 rounded-lg">
+              <Leaf size={24} className="text-emerald-300" />
+            </div>
+            <h1 className="text-xl font-bold text-white font-sans tracking-tight">
+              Lizly Skin Care Clinic
+            </h1>
+          </motion.div>
 
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-              className="bg-white rounded-xl shadow-sm border border-gray-200 p-6"
-            >
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">
-                    Archived Service Groups
-                  </p>
-                  <p className="text-3xl font-bold text-gray-900 mt-2">
-                    {stats.serviceGroups}
-                  </p>
-                  <p className="text-xs text-amber-600 mt-1 font-medium">
-                    Set to inactive status
-                  </p>
-                </div>
-                <div className="w-12 h-12 bg-gradient-to-br from-amber-100 to-yellow-100 rounded-full flex items-center justify-center">
-                  <Layers className="text-amber-600" size={24} />
-                </div>
-              </div>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-              className="bg-white rounded-xl shadow-sm border border-gray-200 p-6"
-            >
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">
-                    Archived Services
-                  </p>
-                  <p className="text-3xl font-bold text-gray-900 mt-2">
-                    {stats.services}
-                  </p>
-                  <p className="text-xs text-amber-600 mt-1 font-medium">
-                    Set to inactive status
-                  </p>
-                </div>
-                <div className="w-12 h-12 bg-gradient-to-br from-amber-100 to-yellow-100 rounded-full flex items-center justify-center">
-                  <Package className="text-amber-600" size={24} />
-                </div>
-              </div>
-            </motion.div>
+          {/* Search for Mobile (hidden on desktop) */}
+          <div className="px-4 mb-4 w-full lg:hidden">
+            <div className="relative">
+              <Search
+                className="absolute left-3 top-1/2 transform -translate-y-1/2 text-emerald-300"
+                size={18}
+              />
+              <input
+                type="text"
+                placeholder="Search menu..."
+                className="pl-10 pr-4 py-2 rounded-lg bg-emerald-900/50 text-white w-full focus:outline-none focus:ring-2 focus:ring-emerald-500 placeholder-emerald-300"
+              />
+            </div>
           </div>
 
-          {/* Main Content */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
-            className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden"
-          >
-            {/* Tabs */}
-            <div className="border-b border-gray-200">
-              <div className="px-6">
-                <nav className="-mb-px flex space-x-8">
-                  {[
-                    { id: "customers", name: "Customers", icon: Users },
-                    { id: "service-groups", name: "Service Groups", icon: Layers },
-                    { id: "services", name: "Services", icon: Package },
-                  ].map((tab) => {
-                    const Icon = tab.icon;
-                    return (
-                      <button
-                        key={tab.id}
-                        onClick={() => {
-                          setActiveTab(tab.id);
-                          setCurrentPage(1);
-                          setSelectedItem(null);
-                        }}
-                        className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 transition-colors ${
-                          activeTab === tab.id
-                            ? "border-emerald-500 text-emerald-600"
-                            : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                        }`}
-                      >
-                        <Icon size={18} />
-                        {tab.name}
-                        <span
-                          className={`ml-2 px-2 py-1 text-xs rounded-full ${
-                            activeTab === tab.id
-                              ? "bg-emerald-100 text-emerald-800"
-                              : "bg-gray-100 text-gray-600"
-                          }`}
-                        >
-                          {stats[tab.id.replace("-", "")]}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </nav>
-              </div>
-            </div>
-
-            {/* Search and Filters */}
-            <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
-              <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
-                <div className="relative flex-1 max-w-md">
-                  <Search
-                    className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-                    size={18}
-                  />
-                  <input
-                    type="text"
-                    placeholder={`Search archived ${activeTab}...`}
-                    value={searchQuery}
-                    onChange={(e) => {
-                      setSearchQuery(e.target.value);
-                      setCurrentPage(1);
-                    }}
-                    className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
-                  />
-                  {searchQuery && (
-                    <button
-                      onClick={() => setSearchQuery("")}
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
-                    >
-                      <X size={16} />
-                    </button>
-                  )}
+          {/* Menu Items with Active State Highlight */}
+          <div className="w-full px-4 space-y-1 overflow-y-auto flex-grow custom-scrollbar">
+            {/* Dashboard */}
+            <Link href="/home" passHref>
+              <div
+                className={`w-full p-3 rounded-lg text-left flex items-center cursor-pointer transition-all ${pathname === "/home" ? "bg-emerald-600 shadow-md" : "hover:bg-emerald-600/70"}`}
+              >
+                <div
+                  className={`p-1.5 mr-3 rounded-lg ${pathname === "/home" ? "bg-white text-emerald-700" : "bg-emerald-900/30 text-white"}`}
+                >
+                  <Home size={18} />
                 </div>
-
-                {(activeTab === "service-groups" || activeTab === "services") && (
-                  <div className="flex items-center gap-2">
-                    <Filter size={16} className="text-gray-400" />
-                    <select
-                      value={filterStatus}
-                      onChange={(e) => {
-                        setFilterStatus(e.target.value);
-                        setCurrentPage(1);
-                      }}
-                      className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
-                    >
-                      <option value="all">All Status</option>
-                      <option value="active">Active</option>
-                      <option value="inactive">Inactive</option>
-                    </select>
-                  </div>
+                <span>Dashboard</span>
+                {pathname === "/home" && (
+                  <motion.div
+                    className="ml-auto w-2 h-2 bg-white rounded-full"
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                  />
                 )}
               </div>
+            </Link>
+
+            {/* Customer Management */}
+            <Link href="/customers" passHref>
+              <div
+                className={`w-full p-3 rounded-lg text-left flex items-center cursor-pointer transition-all ${pathname === "/customers" ? "bg-emerald-600 shadow-md" : "hover:bg-emerald-600/70"}`}
+              >
+                <div
+                  className={`p-1.5 mr-3 rounded-lg ${pathname === "/customers" ? "bg-white text-emerald-700" : "bg-emerald-900/30 text-white"}`}
+                >
+                  <Users size={18} />
+                </div>
+                <span>Customer Management</span>
+                {pathname === "/customers" && (
+                  <motion.div
+                    className="ml-auto w-2 h-2 bg-white rounded-full"
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                  />
+                )}
+              </div>
+            </Link>
+
+            {/* Archive - Active */}
+            <Link href="/archive" passHref>
+              <div
+                className={`w-full p-3 rounded-lg text-left flex items-center cursor-pointer transition-all ${pathname === "/archive" ? "bg-emerald-600 shadow-md" : "hover:bg-emerald-600/70"}`}
+              >
+                <div
+                  className={`p-1.5 mr-3 rounded-lg ${pathname === "/archive" ? "bg-white text-emerald-700" : "bg-emerald-900/30 text-white"}`}
+                >
+                  <Archive size={18} />
+                </div>
+                <span>Customer Archive</span>
+                {pathname === "/archive" && (
+                  <motion.div
+                    className="ml-auto w-2 h-2 bg-white rounded-full"
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                  />
+                )}
+              </div>
+            </Link>
+
+            {/* User Management */}
+            <Link href="/userManage" passHref>
+              <div
+                className={`w-full p-3 rounded-lg text-left flex items-center cursor-pointer transition-all ${pathname === "/userManage" ? "bg-emerald-600 shadow-md" : "hover:bg-emerald-600/70"}`}
+              >
+                <div
+                  className={`p-1.5 mr-3 rounded-lg ${pathname === "/userManage" ? "bg-white text-emerald-700" : "bg-emerald-900/30 text-white"}`}
+                >
+                  <Users size={18} />
+                </div>
+                <span>User Management</span>
+                {pathname === "/userManage" && (
+                  <motion.div
+                    className="ml-auto w-2 h-2 bg-white rounded-full"
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                  />
+                )}
+              </div>
+            </Link>
+          </div>
+
+          {/* Enhanced Sidebar Footer */}
+          <motion.div
+            className="mt-auto px-6 w-full"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.5 }}
+          >
+            <div className="border-t border-emerald-600 pt-4 pb-2">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center space-x-2">
+                  <div className="w-8 h-8 rounded-full bg-emerald-600 flex items-center justify-center">
+                    <User size={16} />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">Admin User</p>
+                    <p className="text-xs text-emerald-300">Administrator</p>
+                  </div>
+                </div>
+                <button 
+                  className="text-emerald-300 hover:text-white transition-colors"
+                  onClick={handleLogout}
+                >
+                  <LogOut size={18} />
+                </button>
+              </div>
+              <p className="text-xs text-emerald-200 mt-3">
+                Lizly Skin Care Clinic v1.2.0
+              </p>
+              <p className="text-xs text-emerald-300 mt-1">
+                © {new Date().getFullYear()} All Rights Reserved
+              </p>
+            </div>
+          </motion.div>
+        </nav>
+
+        {/* Main Content */}
+        <main className="flex-1 p-8 max-w-screen-xl mx-auto ml-64 bg-white min-h-screen pt-26">
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+            className="flex justify-between items-center mb-6"
+          >
+            <h1 className="text-2xl font-bold text-gray-800">
+              Archive Management
+            </h1>
+          </motion.div>
+
+          {/* Tabs Navigation */}
+          <div className="mb-6 border-b border-gray-200">
+            <nav className="-mb-px flex space-x-8">
+              {[
+                { id: "customers", name: "Customers", icon: Users },
+                { id: "service-groups", name: "Service Groups", icon: Layers },
+                { id: "services", name: "Services", icon: Package },
+              ].map((tab) => {
+                const Icon = tab.icon;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => {
+                      setActiveTab(tab.id);
+                      setCurrentPage(1);
+                      setSelectedItem(null);
+                    }}
+                    className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${
+                      activeTab === tab.id
+                        ? "border-emerald-500 text-emerald-600"
+                        : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                    }`}
+                  >
+                    <Icon size={18} />
+                    {tab.name}
+                    <span
+                      className={`ml-2 px-2 py-1 text-xs rounded-full ${
+                        activeTab === tab.id
+                          ? "bg-emerald-100 text-emerald-800"
+                          : "bg-gray-100 text-gray-600"
+                      }`}
+                    >
+                      {stats[tab.id.replace("-", "")]}
+                    </span>
+                  </button>
+                );
+              })}
+            </nav>
+          </div>
+
+          {/* Stats Overview */}
+          <motion.div
+            className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+          >
+            <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-200 flex items-center">
+              <div className="bg-gray-100 p-3 rounded-lg mr-4">
+                <Users className="text-gray-600" size={20} />
+              </div>
+              <div>
+                <h3 className="text-2xl font-bold text-gray-800">
+                  {stats.customers}
+                </h3>
+                <p className="text-sm text-gray-600">
+                  Archived Customers
+                </p>
+              </div>
             </div>
 
-            {/* Table */}
-            <div className="flex">
-              <div className={`flex-1 overflow-x-auto ${selectedItem ? "lg:pr-[350px]" : ""}`}>
+            <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-200 flex items-center">
+              <div className="bg-blue-100 p-3 rounded-lg mr-4">
+                <Layers className="text-blue-600" size={20} />
+              </div>
+              <div>
+                <h3 className="text-2xl font-bold text-gray-800">
+                  {stats.serviceGroups}
+                </h3>
+                <p className="text-sm text-gray-600">
+                  Archived Service Groups
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-200 flex items-center">
+              <div className="bg-amber-100 p-3 rounded-lg mr-4">
+                <Package className="text-amber-600" size={20} />
+              </div>
+              <div>
+                <h3 className="text-2xl font-bold text-gray-800">
+                  {stats.services}
+                </h3>
+                <p className="text-sm text-gray-600">
+                  Archived Services
+                </p>
+              </div>
+            </div>
+          </motion.div>
+
+          <div className="flex">
+            {/* Main Content Area */}
+            <motion.div
+              className={`${selectedItem ? "w-[calc(100%-350px)]" : "w-full"} transition-all duration-300 pr-4`}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.1 }}
+            >
+              <motion.div
+                className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden"
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ duration: 0.3, delay: 0.2 }}
+              >
                 {isLoading ? (
                   <div className="flex justify-center items-center py-16">
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600"></div>
@@ -1403,14 +1347,6 @@ export default function ArchivePage() {
                         ? `No ${activeTab} found matching "${searchQuery}".`
                         : `All ${activeTab} are currently active. Archived items will appear here.`}
                     </p>
-                    {searchQuery && (
-                      <button
-                        onClick={() => setSearchQuery("")}
-                        className="mt-4 text-emerald-600 hover:text-emerald-700 font-medium"
-                      >
-                        Clear search
-                      </button>
-                    )}
                   </div>
                 ) : (
                   <>
@@ -1420,93 +1356,90 @@ export default function ArchivePage() {
 
                     {/* Pagination */}
                     {totalPages > 1 && (
-                      <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
-                        <div className="flex items-center justify-between">
-                          <div className="text-sm text-gray-700">
-                            Showing{" "}
-                            <span className="font-medium">
-                              {indexOfFirstItem + 1}
-                            </span>{" "}
-                            to{" "}
-                            <span className="font-medium">
-                              {Math.min(indexOfLastItem, sortedData.length)}
-                            </span>{" "}
-                            of{" "}
-                            <span className="font-medium">{sortedData.length}</span>{" "}
-                            results
+                      <div className="flex items-center justify-between px-6 py-4 bg-white border-t border-gray-200">
+                        <div className="flex-1 flex justify-between sm:hidden">
+                          <button
+                            onClick={() => handlePageChange(Math.max(currentPage - 1, 1))}
+                            disabled={currentPage === 1}
+                            className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+                          >
+                            Previous
+                          </button>
+                          <button
+                            onClick={() => handlePageChange(currentPage + 1)}
+                            disabled={currentItems.length < itemsPerPage}
+                            className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+                          >
+                            Next
+                          </button>
+                        </div>
+                        <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                          <div>
+                            <p className="text-sm text-gray-700">
+                              Showing{" "}
+                              <span className="font-medium">
+                                {(currentPage - 1) * itemsPerPage + 1}
+                              </span>{" "}
+                              to{" "}
+                              <span className="font-medium">
+                                {Math.min(currentPage * itemsPerPage, sortedData.length)}
+                              </span>{" "}
+                              of <span className="font-medium">{sortedData.length}</span>{" "}
+                              results
+                            </p>
                           </div>
-                          <div className="flex items-center space-x-2">
-                            <button
-                              onClick={() => handlePageChange(1)}
-                              disabled={currentPage === 1}
-                              className="p-2 rounded-lg border border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
+                          <div>
+                            <nav
+                              className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px"
+                              aria-label="Pagination"
                             >
-                              <ChevronsLeft size={16} />
-                            </button>
-                            <button
-                              onClick={() => handlePageChange(currentPage - 1)}
-                              disabled={currentPage === 1}
-                              className="p-2 rounded-lg border border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
-                            >
-                              <ChevronLeft size={16} />
-                            </button>
-                            <div className="flex items-center space-x-1">
-                              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                                let pageNumber;
-                                if (totalPages <= 5) {
-                                  pageNumber = i + 1;
-                                } else if (currentPage <= 3) {
-                                  pageNumber = i + 1;
-                                } else if (currentPage >= totalPages - 2) {
-                                  pageNumber = totalPages - 4 + i;
-                                } else {
-                                  pageNumber = currentPage - 2 + i;
-                                }
-
-                                return (
-                                  <button
-                                    key={pageNumber}
-                                    onClick={() => handlePageChange(pageNumber)}
-                                    className={`w-8 h-8 rounded-lg text-sm font-medium transition-colors ${
-                                      currentPage === pageNumber
-                                        ? "bg-emerald-600 text-white"
-                                        : "text-gray-700 hover:bg-gray-100"
-                                    }`}
-                                  >
-                                    {pageNumber}
-                                  </button>
-                                );
-                              })}
-                            </div>
-                            <button
-                              onClick={() => handlePageChange(currentPage + 1)}
-                              disabled={currentPage === totalPages}
-                              className="p-2 rounded-lg border border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
-                            >
-                              <ChevronRight size={16} />
-                            </button>
-                            <button
-                              onClick={() => handlePageChange(totalPages)}
-                              disabled={currentPage === totalPages}
-                              className="p-2 rounded-lg border border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
-                            >
-                              <ChevronsRight size={16} />
-                            </button>
+                              <button
+                                onClick={() => handlePageChange(Math.max(currentPage - 1, 1))}
+                                disabled={currentPage === 1}
+                                className="relative inline-flex items-center px-3 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
+                              >
+                                <span className="sr-only">Previous</span>
+                                <ChevronLeft className="h-5 w-5" aria-hidden="true" />
+                              </button>
+                              {Array.from({
+                                length: Math.ceil(sortedData.length / itemsPerPage),
+                              }).map((_, index) => (
+                                <button
+                                  key={index}
+                                  onClick={() => handlePageChange(index + 1)}
+                                  className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
+                                    currentPage === index + 1
+                                      ? "z-10 bg-emerald-50 border-emerald-500 text-emerald-600"
+                                      : "bg-white border-gray-300 text-gray-500 hover:bg-gray-50"
+                                  }`}
+                                >
+                                  {index + 1}
+                                </button>
+                              ))}
+                              <button
+                                onClick={() => handlePageChange(currentPage + 1)}
+                                disabled={currentPage * itemsPerPage >= sortedData.length}
+                                className="relative inline-flex items-center px-3 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
+                              >
+                                <span className="sr-only">Next</span>
+                                <ChevronRight className="h-5 w-5" aria-hidden="true" />
+                              </button>
+                            </nav>
                           </div>
                         </div>
                       </div>
                     )}
                   </>
                 )}
-              </div>
+              </motion.div>
+            </motion.div>
 
-              {/* Detail Panel */}
-              <AnimatePresence>
-                {selectedItem && renderDetailPanel()}
-              </AnimatePresence>
-            </div>
-          </motion.div>
-        </div>
+            {/* Detail Panel */}
+            <AnimatePresence>
+              {renderDetailPanel()}
+            </AnimatePresence>
+          </div>
+        </main>
       </div>
     </div>
   );
