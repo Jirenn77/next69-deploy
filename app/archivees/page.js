@@ -1227,9 +1227,7 @@ export default function ArchivePage() {
                 );
               })}
             </nav>
-          </div>
-
-          <motion.button
+            <motion.button
             onClick={handleRunArchive}
             className="flex items-center space-x-2 bg-amber-600 hover:bg-amber-700 text-white py-2.5 px-4 rounded-lg transition-colors font-medium shadow-md hover:shadow-lg"
             whileHover={{ scale: 1.05 }}
@@ -1238,6 +1236,7 @@ export default function ArchivePage() {
             <Archive size={18} />
             <span>Run Archive</span>
           </motion.button>  
+          </div>
 
           {/* Stats Overview */}
           <motion.div

@@ -275,7 +275,7 @@ useEffect(() => {
           { path: "/employeeM", icon: Users, label: "Employee Management" },
           { path: "/userManage", icon: Users, label: "User Management" },
           { path: "/branchM", icon: Home, label: "Branch Management" },
-          { path: "/archivees", icon: Archive, label: "Customer Archive" },
+          { path: "/archivees", icon: Archive, label: "Archives" },
         ].map((item) => (
           <Link key={item.path} href={item.path} passHref>
             <div
