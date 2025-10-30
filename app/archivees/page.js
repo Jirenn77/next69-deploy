@@ -69,68 +69,34 @@ export default function ArchivePage() {
   }, [activeTab]);
 
   const fetchArchivedData = async () => {
-    try {
-      setIsLoading(true);
-      
-      if (activeTab === "customers") {
-        const response = await fetch("https://api.lizlyskincare.sbs/archive.php?action=get");
-        if (!response.ok) throw new Error("Failed to fetch archived customers");
-        const data = await response.json();
-        setArchivedCustomers(Array.isArray(data) ? data : []);
-      } else if (activeTab === "service-groups") {
-        // Mock data for service groups - replace with actual API call
-        const mockServiceGroups = [
-          {
-            group_id: 1,
-            group_name: "Facial Treatments",
-            description: "Complete facial care services",
-            servicesCount: 8,
-            status: "Inactive",
-            archived_at: "Nov 15, 2023"
-          },
-          {
-            group_id: 2,
-            group_name: "Body Massage",
-            description: "Relaxing body massage therapies",
-            servicesCount: 5,
-            status: "Inactive",
-            archived_at: "Oct 22, 2023"
-          }
-        ];
-        setArchivedServiceGroups(mockServiceGroups);
-      } else if (activeTab === "services") {
-        // Mock data for services - replace with actual API call
-        const mockServices = [
-          {
-            service_id: 1,
-            name: "Classic Facial",
-            category: "Facial Treatments",
-            price: "1200.00",
-            duration: "60",
-            description: "Basic facial cleaning and treatment",
-            status: "Inactive",
-            archived_at: "Nov 15, 2023"
-          },
-          {
-            service_id: 2,
-            name: "Aromatherapy Massage",
-            category: "Body Massage",
-            price: "1500.00",
-            duration: "90",
-            description: "Relaxing massage with essential oils",
-            status: "Inactive",
-            archived_at: "Oct 22, 2023"
-          }
-        ];
-        setArchivedServices(mockServices);
-      }
-    } catch (error) {
-      toast.error(`Failed to load archived ${activeTab}`);
-      console.error(error);
-    } finally {
-      setIsLoading(false);
+  try {
+    setIsLoading(true);
+    
+    if (activeTab === "customers") {
+      const response = await fetch("https://api.lizlyskincare.sbs/archive.php?action=get");
+      if (!response.ok) throw new Error("Failed to fetch archived customers");
+      const data = await response.json();
+      setArchivedCustomers(Array.isArray(data) ? data : []);
+    } else if (activeTab === "service-groups") {
+      // Fetch archived service groups
+      const response = await fetch("https://api.lizlyskincare.sbs/archive.php?action=get_service_groups");
+      if (!response.ok) throw new Error("Failed to fetch archived service groups");
+      const data = await response.json();
+      setArchivedServiceGroups(Array.isArray(data) ? data : []);
+    } else if (activeTab === "services") {
+      // Fetch archived services
+      const response = await fetch("https://api.lizlyskincare.sbs/archive.php?action=get_services");
+      if (!response.ok) throw new Error("Failed to fetch archived services");
+      const data = await response.json();
+      setArchivedServices(Array.isArray(data) ? data : []);
     }
-  };
+  } catch (error) {
+    toast.error(`Failed to load archived ${activeTab}`);
+    console.error(error);
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   const handleRestoreCustomer = async (archiveId, customerName) => {
     toast.custom((t) => (
@@ -250,16 +216,38 @@ export default function ArchivePage() {
   };
 
   const performRestore = async (id, name, type) => {
-    try {
-      setIsRestoring(true);
-      
-      const loadingToast = toast.loading(`Restoring ${name}...`);
-      
-      // Simulate API call - replace with actual API endpoints
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      toast.dismiss(loadingToast);
+  try {
+    setIsRestoring(true);
+    
+    const loadingToast = toast.loading(`Restoring ${name}...`);
+    
+    let endpoint = "";
+    let payload = {};
+    
+    if (type === "customer") {
+      endpoint = "https://api.lizlyskincare.sbs/archive.php?action=restore";
+      payload = { archive_id: id };
+    } else if (type === "service-group") {
+      endpoint = "https://api.lizlyskincare.sbs/archive.php?action=restore_service_group";
+      payload = { group_id: id };
+    } else if (type === "service") {
+      endpoint = "https://api.lizlyskincare.sbs/archive.php?action=restore_service";
+      payload = { service_id: id };
+    }
+    
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+    
+    const result = await response.json();
+    
+    toast.dismiss(loadingToast);
 
+    if (result.success) {
       toast.success(`✅ ${type === 'customer' ? 'Customer' : type === 'service-group' ? 'Service Group' : 'Service'} ${name} restored successfully`, {
         description: `The ${type} is now back in the active list.`,
         duration: 4000,
@@ -267,16 +255,19 @@ export default function ArchivePage() {
       
       fetchArchivedData();
       setSelectedItem(null);
-    } catch (error) {
-      console.error(`Error restoring ${type}:`, error);
-      toast.error(`❌ Error restoring ${type}`, {
-        description: "Network error occurred. Please check your connection.",
-        duration: 5000,
-      });
-    } finally {
-      setIsRestoring(false);
+    } else {
+      throw new Error(result.message || `Failed to restore ${type}`);
     }
-  };
+  } catch (error) {
+    console.error(`Error restoring ${type}:`, error);
+    toast.error(`❌ Error restoring ${type}`, {
+      description: error.message || "Network error occurred. Please check your connection.",
+      duration: 5000,
+    });
+  } finally {
+    setIsRestoring(false);
+  }
+};
 
   const handleRunArchive = async () => {
     toast.custom((t) => (
@@ -1198,16 +1189,6 @@ export default function ArchivePage() {
             </h1>
           </motion.div>
 
-          <motion.button
-            onClick={handleRunArchive}
-            className="flex items-center space-x-2 bg-amber-600 hover:bg-amber-700 text-white py-2.5 px-4 rounded-lg transition-colors font-medium shadow-md hover:shadow-lg"
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-          >
-            <Archive size={18} />
-            <span>Run Archive</span>
-          </motion.button>
-
           {/* Tabs Navigation */}
           <div className="mb-6 border-b border-gray-200">
             <nav className="-mb-px flex space-x-8">
@@ -1247,6 +1228,16 @@ export default function ArchivePage() {
               })}
             </nav>
           </div>
+
+          <motion.button
+            onClick={handleRunArchive}
+            className="flex items-center space-x-2 bg-amber-600 hover:bg-amber-700 text-white py-2.5 px-4 rounded-lg transition-colors font-medium shadow-md hover:shadow-lg"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            <Archive size={18} />
+            <span>Run Archive</span>
+          </motion.button>  
 
           {/* Stats Overview */}
           <motion.div

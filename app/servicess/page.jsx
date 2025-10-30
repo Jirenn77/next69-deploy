@@ -419,6 +419,12 @@ export default function ServiceGroupsPage() {
         updated_at: backendGroup.updated_at ?? undefined,
       };
 
+       if (formData.status === 'Inactive') {
+      await handleArchiveServiceGroup(formData.id, formData.name);
+      setEditMode(false);
+      return;
+    }
+
       // Safe functional update to prevent duplicates / race conditions
       setServiceGroups((prev) => {
         const exists = prev.some((g) => (g.group_id ?? g.id) === gid);
@@ -564,10 +570,220 @@ export default function ServiceGroupsPage() {
     }
   };
 
-  const toggleDarkMode = () => {
-    setDarkMode(!darkMode);
-  };
+ // Add this function to your ServiceGroupsPage component
+const handleArchiveServiceGroup = async (groupId, groupName) => {
+  toast.custom((t) => (
+    <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-4 max-w-sm w-full">
+      <div className="flex items-start gap-3">
+        <div className="flex-shrink-0 w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center">
+          <Archive className="text-amber-600" size={20} />
+        </div>
+        <div className="flex-1">
+          <h3 className="text-sm font-semibold text-gray-900 mb-1">
+            Archive Service Group
+          </h3>
+          <p className="text-sm text-gray-600 mb-3">
+            Are you sure you want to archive <strong>{groupName}</strong>? This will move it to the archive page.
+          </p>
+          <div className="flex gap-2 justify-end">
+            <button
+              onClick={() => toast.dismiss(t)}
+              className="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-md transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={async () => {
+                toast.dismiss(t);
+                await performArchiveServiceGroup(groupId, groupName);
+              }}
+              className="px-3 py-1.5 text-sm bg-amber-600 text-white hover:bg-amber-700 rounded-md transition-colors"
+            >
+              Archive
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  ), {
+    duration: Infinity,
+  });
+};
 
+const performArchiveServiceGroup = async (groupId, groupName) => {
+  try {
+    const loadingToast = toast.loading(`Archiving ${groupName}...`);
+    
+    const response = await fetch("https://api.lizlyskincare.sbs/servicegroup.php?action=archive_group", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        group_id: groupId,
+      }),
+    });
+    
+    const result = await response.json();
+    toast.dismiss(loadingToast);
+
+    if (result.success) {
+      toast.success(`✅ Service Group "${groupName}" archived successfully`, {
+        description: "The service group has been moved to archives.",
+        duration: 4000,
+      });
+      
+      // Refresh the service groups list
+      const fetchServiceGroups = async () => {
+        try {
+          const response = await fetch(
+            "https://api.lizlyskincare.sbs/servicegroup.php?action=get_groups_with_services"
+          );
+          if (!response.ok) {
+            throw new Error("Failed to fetch service groups");
+          }
+          const data = await response.json();
+          if (Array.isArray(data)) {
+            const updatedData = data.map((group) => ({
+              ...group,
+              servicesCount: group.services?.length || 0,
+              averagePrice: group.services?.length
+                ? (
+                    group.services.reduce(
+                      (acc, s) => acc + parseFloat(s.price || 0),
+                      0
+                    ) / group.services.length
+                  ).toFixed(2)
+                : "0.00",
+            }));
+            setServiceGroups(updatedData);
+          }
+        } catch (err) {
+          console.error("Fetch error:", err);
+        }
+      };
+      
+      await fetchServiceGroups();
+    } else {
+      throw new Error(result.message || "Failed to archive service group");
+    }
+  } catch (error) {
+    console.error("Error archiving service group:", error);
+    toast.error("❌ Error archiving service group", {
+      description: error.message || "Network error occurred. Please check your connection.",
+      duration: 5000,
+    });
+  }
+};
+
+// Add archive functionality for services
+const handleArchiveService = async (serviceId, serviceName) => {
+  toast.custom((t) => (
+    <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-4 max-w-sm w-full">
+      <div className="flex items-start gap-3">
+        <div className="flex-shrink-0 w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center">
+          <Archive className="text-amber-600" size={20} />
+        </div>
+        <div className="flex-1">
+          <h3 className="text-sm font-semibold text-gray-900 mb-1">
+            Archive Service
+          </h3>
+          <p className="text-sm text-gray-600 mb-3">
+            Are you sure you want to archive <strong>{serviceName}</strong>? This will move it to the archive page.
+          </p>
+          <div className="flex gap-2 justify-end">
+            <button
+              onClick={() => toast.dismiss(t)}
+              className="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-md transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={async () => {
+                toast.dismiss(t);
+                await performArchiveService(serviceId, serviceName);
+              }}
+              className="px-3 py-1.5 text-sm bg-amber-600 text-white hover:bg-amber-700 rounded-md transition-colors"
+            >
+              Archive
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  ), {
+    duration: Infinity,
+  });
+};
+
+const performArchiveService = async (serviceId, serviceName) => {
+  try {
+    const loadingToast = toast.loading(`Archiving ${serviceName}...`);
+    
+    const response = await fetch("https://api.lizlyskincare.sbs/servicegroup.php?action=archive_service", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        service_id: serviceId,
+      }),
+    });
+    
+    const result = await response.json();
+    toast.dismiss(loadingToast);
+
+    if (result.success) {
+      toast.success(`✅ Service "${serviceName}" archived successfully`, {
+        description: "The service has been moved to archives.",
+        duration: 4000,
+      });
+      
+      // Refresh the data
+      if (activeTab === "all-services") {
+        await fetchAllServices();
+      } else {
+        const fetchServiceGroups = async () => {
+          try {
+            const response = await fetch(
+              "https://api.lizlyskincare.sbs/servicegroup.php?action=get_groups_with_services"
+            );
+            if (!response.ok) {
+              throw new Error("Failed to fetch service groups");
+            }
+            const data = await response.json();
+            if (Array.isArray(data)) {
+              const updatedData = data.map((group) => ({
+                ...group,
+                servicesCount: group.services?.length || 0,
+                averagePrice: group.services?.length
+                  ? (
+                      group.services.reduce(
+                        (acc, s) => acc + parseFloat(s.price || 0),
+                        0
+                      ) / group.services.length
+                    ).toFixed(2)
+                  : "0.00",
+              }));
+              setServiceGroups(updatedData);
+            }
+          } catch (err) {
+            console.error("Fetch error:", err);
+          }
+        };
+        await fetchServiceGroups();
+      }
+    } else {
+      throw new Error(result.message || "Failed to archive service");
+    }
+  } catch (error) {
+    console.error("Error archiving service:", error);
+    toast.error("❌ Error archiving service", {
+      description: error.message || "Network error occurred. Please check your connection.",
+      duration: 5000,
+    });
+  }
+};
   const handleLogout = () => {
     localStorage.removeItem("authToken");
     window.location.href = "/";
