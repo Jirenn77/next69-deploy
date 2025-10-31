@@ -453,55 +453,71 @@ const handleEdit = async (id) => {
   };
 
   const SummaryView = ({
-    services = [], // Add default value
+  services = [],
   searchTerm = "",
   categoryFilter = "",
-    membershipType,
-  }) => {
-    if (!services || !Array.isArray(services)) {
+  membershipType,
+}) => {
+  // Add safety checks
+  if (!services || !Array.isArray(services)) {
     return <div className="text-gray-500">No services available</div>;
   }
-    const filteredServices = services.filter((service) => {
-      const name = service.name?.toLowerCase() || "";
-      const description = service.description?.toLowerCase() || "";
-      const category = service.category?.toLowerCase() || "";
-      const search = searchTerm.toLowerCase();
-      const filterCategory = categoryFilter.toLowerCase();
 
-      const matchesSearch =
-        name.includes(search) || description.includes(search);
+  const filteredServices = services.filter((service) => {
+    if (!service) return false;
+    
+    const name = service.name?.toLowerCase() || "";
+    const description = service.description?.toLowerCase() || "";
+    const category = service.category?.toLowerCase() || "";
+    const search = searchTerm.toLowerCase();
+    const filterCategory = categoryFilter.toLowerCase();
 
-      const matchesCategory =
-        filterCategory === "" || category === filterCategory;
+    const matchesSearch =
+      name.includes(search) || description.includes(search);
 
-      return matchesSearch && matchesCategory;
-    });
+    const matchesCategory =
+      filterCategory === "" || category === filterCategory;
 
-    const categories = Array.from(
-      new Set(filteredServices.map((s) => s.category))
-    );
+    return matchesSearch && matchesCategory;
+  });
 
-    return (
-      <div className="space-y-4">
-        {categories.map((category) => {
+  const categories = Array.from(
+    new Set(filteredServices.map((s) => s.category).filter(Boolean))
+  );
+
+  return (
+    <div className="space-y-4">
+      {categories.length === 0 ? (
+        <div className="text-gray-500 text-center py-4">
+          No services match your search criteria
+        </div>
+      ) : (
+        categories.map((category) => {
           const categoryServices = filteredServices.filter(
-            (s) => s.category?.toLowerCase() === category?.toLowerCase()
+            (s) => s?.category?.toLowerCase() === category?.toLowerCase()
           );
 
           const categoryTotal = categoryServices.reduce(
-            (sum, s) => sum + (s.originalPrice || 0),
+            (sum, s) => {
+              const price = s.originalPrice || s.price || 0;
+              return sum + parseFloat(price);
+            },
             0
           );
 
           const categoryDiscountedTotal = categoryServices.reduce(
-            (sum, s) => sum + (s.discountedPrice || 0),
+            (sum, s) => {
+              const originalPrice = s.originalPrice || s.price || 0;
+              const discountedPrice = s.discountedPrice || (originalPrice * 0.5);
+              return sum + parseFloat(discountedPrice);
+            },
             0
           );
 
           return (
             <div key={category} className="border-b pb-3">
               <div className="flex justify-between items-center">
-                <h4 className="font-medium">{category}</h4>
+                <h4 className="font-medium">{category || 'Uncategorized'}</h4>
                 <span className="text-sm text-gray-600">
                   {categoryServices.length} services
                 </span>
@@ -524,76 +540,102 @@ const handleEdit = async (id) => {
               </div>
             </div>
           );
-        })}
-      </div>
-    );
-  };
+        })
+      )}
+    </div>
+  );
+};
 
-  const DetailedView = ({
-    services = [],
-     searchTerm = "",
+const DetailedView = ({
+  services = [],
+  searchTerm = "",
   categoryFilter = "",
-    membershipType,
-    currentPage,
-    servicesPerPage,
-    setCurrentPage,
-  }) => {
-    if (!services || !Array.isArray(services)) {
+  membershipType,
+  currentPage,
+  servicesPerPage,
+  setCurrentPage,
+}) => {
+  // Add safety checks
+  if (!services || !Array.isArray(services)) {
     return <div className="text-gray-500">No services available</div>;
   }
-    const filteredServices = services.filter((service) => {
-      const matchesSearch =
-        service.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        service.description.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesCategory =
-        categoryFilter === "" || service.category === categoryFilter;
-      return matchesSearch && matchesCategory;
-    });
 
-    const indexOfLastService = currentPage * servicesPerPage;
-    const indexOfFirstService = indexOfLastService - servicesPerPage;
-    const currentServices = filteredServices.slice(
-      indexOfFirstService,
-      indexOfLastService
-    );
-    const totalPages = Math.ceil(filteredServices.length / servicesPerPage);
+  const filteredServices = services.filter((service) => {
+    if (!service) return false;
+    
+    const name = service.name?.toLowerCase() || "";
+    const description = service.description?.toLowerCase() || "";
+    const category = service.category?.toLowerCase() || "";
+    const search = searchTerm.toLowerCase();
+    const filterCategory = categoryFilter.toLowerCase();
 
-    return (
-      <div className="space-y-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {currentServices.map((service) => (
-            <ServiceCard
-              key={service.id}
-              service={service}
-              membershipType={membershipType}
-            />
-          ))}
+    const matchesSearch =
+      name.includes(search) || description.includes(search);
+
+    const matchesCategory =
+      filterCategory === "" || category === filterCategory;
+
+    return matchesSearch && matchesCategory;
+  });
+
+  const indexOfLastService = currentPage * servicesPerPage;
+  const indexOfFirstService = indexOfLastService - servicesPerPage;
+  const currentServices = filteredServices.slice(
+    indexOfFirstService,
+    indexOfLastService
+  );
+  const totalPages = Math.ceil(filteredServices.length / servicesPerPage);
+
+  return (
+    <div className="space-y-4">
+      {filteredServices.length === 0 ? (
+        <div className="text-gray-500 text-center py-8">
+          No services match your search criteria
         </div>
-
-        {totalPages > 1 && (
-          <div className="flex justify-center mt-4">
-            {Array.from({ length: totalPages }).map((_, index) => (
-              <button
-                key={index}
-                onClick={() => setCurrentPage(index + 1)}
-                className={`mx-1 px-3 py-1 rounded ${
-                  currentPage === index + 1
-                    ? "bg-green-500 text-white"
-                    : "bg-gray-200 hover:bg-gray-300"
-                }`}
-              >
-                {index + 1}
-              </button>
+      ) : (
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {currentServices.map((service, index) => (
+              <ServiceCard
+                key={service?.id || `service-${index}`}
+                service={service}
+                membershipType={membershipType}
+              />
             ))}
           </div>
-        )}
-      </div>
-    );
-  };
+
+          {totalPages > 1 && (
+            <div className="flex justify-center mt-4">
+              {Array.from({ length: totalPages }).map((_, index) => (
+                <button
+                  key={index}
+                  onClick={() => setCurrentPage(index + 1)}
+                  className={`mx-1 px-3 py-1 rounded ${
+                    currentPage === index + 1
+                      ? "bg-green-500 text-white"
+                      : "bg-gray-200 hover:bg-gray-300"
+                  }`}
+                >
+                  {index + 1}
+                </button>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+};
 
   const ServiceCard = ({ service, membershipType }) => {
   // Add safety checks
-  if (!service) return null;
+  if (!service) {
+    return (
+      <div className="border rounded-lg p-3 bg-gray-50">
+        <div className="text-sm text-gray-500">Invalid service data</div>
+      </div>
+    );
+  }
   
   const originalPrice = service.originalPrice || service.price || 0;
   const discountedPrice = service.discountedPrice || (originalPrice * 0.5);
@@ -601,7 +643,7 @@ const handleEdit = async (id) => {
 
   return (
     <motion.div
-      className="border rounded-lg p-3 hover:shadow-md transition-shadow"
+      className="border rounded-lg p-3 hover:shadow-md transition-shadow bg-white"
       whileHover={{ y: -2 }}
     >
       <div className="flex justify-between items-start">
