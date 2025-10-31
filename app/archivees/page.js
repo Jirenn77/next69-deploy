@@ -32,10 +32,10 @@ import {
   Leaf,
   Layers,
   Package,
-  Filter,
-  BarChart2,
-  FileText,
-  ClipboardList,
+  Shield,
+  ShieldCheck,
+  ShieldAlert,
+  Lock ,
   UserPlus,
   Tag,
   ShoppingCart,
@@ -309,30 +309,52 @@ export default function ArchivePage() {
   };
 
   const performArchive = async () => {
-    try {
-      const loadingToast = toast.loading("Running archive process...", {
-        description: "Checking for inactive customers...",
-      });
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      toast.dismiss(loadingToast);
+  try {
+    const loadingToast = toast.loading("Running archive process...", {
+      description: "Checking for inactive customers...",
+    });
+    
+    const response = await fetch("https://api.lizlyskincare.sbs/archive.php?action=run", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+    
+    const result = await response.json();
+    
+    toast.dismiss(loadingToast);
 
+    if (result.success) {
+      let description = `Successfully archived ${result.archived_count} inactive customers.`;
+      
+      if (result.total_processed > 0) {
+        description += ` Processed ${result.total_processed} customers.`;
+      }
+      
+      if (result.errors && result.errors.length > 0) {
+        description += ` ${result.error_count} errors occurred (check console for details).`;
+        console.warn('Archive process errors:', result.errors);
+      }
+      
       toast.success(`✅ Archive process completed`, {
-        description: `Successfully archived 3 inactive customers.`,
-        duration: 5000,
+        description: description,
+        duration: 6000,
       });
       
+      // Refresh the archived data
       fetchArchivedData();
-    } catch (error) {
-      console.error("Error running archive:", error);
-      toast.error("❌ Archive process error", {
-        description: "Network error occurred. Please check your connection.",
-        duration: 5000,
-      });
+    } else {
+      throw new Error(result.message || "Archive process failed");
     }
-  };
+  } catch (error) {
+    console.error("Error running archive:", error);
+    toast.error("❌ Archive process error", {
+      description: error.message || "Network error occurred. Please check your connection.",
+      duration: 5000,
+    });
+  }
+};
 
   // Sorting function
   const handleSort = (key) => {
