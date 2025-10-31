@@ -51,6 +51,7 @@ export default function Memberships() {
   const [showSummary, setShowSummary] = useState(false);
   const servicesPerPage = 12;
   const [allServices, setAllServices] = useState([]);
+  const [error, setError] = useState(null);
   const [newMembership, setNewMembership] = useState({
   name: "",
   type: "",
@@ -62,6 +63,16 @@ export default function Memberships() {
   valid_until: "",
   status: "active",
 });
+
+useEffect(() => {
+  const handleError = (error) => {
+    console.error('Client-side error:', error);
+    setError(error.message);
+  };
+
+  window.addEventListener('error', handleError);
+  return () => window.removeEventListener('error', handleError);
+}, []);
 
   const calculateDiscountedPrice = (originalPrice) => {
     return originalPrice * 0.5; // 50% fixed discount for both types
