@@ -136,7 +136,6 @@ const fetchPremiumServices = async (membershipType) => {
 
   useEffect(() => {
     fetchMemberships();
-    fetchPremiumServices();
   }, []);
 
   const fetchMembershipServices = async (membershipId) => {
@@ -454,11 +453,14 @@ const handleEdit = async (id) => {
   };
 
   const SummaryView = ({
-    services,
-    searchTerm,
-    categoryFilter,
+    services = [], // Add default value
+  searchTerm = "",
+  categoryFilter = "",
     membershipType,
   }) => {
+    if (!services || !Array.isArray(services)) {
+    return <div className="text-gray-500">No services available</div>;
+  }
     const filteredServices = services.filter((service) => {
       const name = service.name?.toLowerCase() || "";
       const description = service.description?.toLowerCase() || "";
@@ -528,14 +530,17 @@ const handleEdit = async (id) => {
   };
 
   const DetailedView = ({
-    services,
-    searchTerm,
-    categoryFilter,
+    services = [],
+     searchTerm = "",
+  categoryFilter = "",
     membershipType,
     currentPage,
     servicesPerPage,
     setCurrentPage,
   }) => {
+    if (!services || !Array.isArray(services)) {
+    return <div className="text-gray-500">No services available</div>;
+  }
     const filteredServices = services.filter((service) => {
       const matchesSearch =
         service.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -587,39 +592,46 @@ const handleEdit = async (id) => {
   };
 
   const ServiceCard = ({ service, membershipType }) => {
-    return (
-      <motion.div
-        className="border rounded-lg p-3 hover:shadow-md transition-shadow"
-        whileHover={{ y: -2 }}
-      >
-        <div className="flex justify-between items-start">
-                            <h4 className="font-medium text-sm">{service.name}</h4>
-                          <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
-                            {service.category}
-                          </span>
+  // Add safety checks
+  if (!service) return null;
+  
+  const originalPrice = service.originalPrice || service.price || 0;
+  const discountedPrice = service.discountedPrice || (originalPrice * 0.5);
+  const discountPercentage = service.discountPercentage || "50";
+
+  return (
+    <motion.div
+      className="border rounded-lg p-3 hover:shadow-md transition-shadow"
+      whileHover={{ y: -2 }}
+    >
+      <div className="flex justify-between items-start">
+        <h4 className="font-medium text-sm">{service.name || 'Unnamed Service'}</h4>
+        <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
+          {service.category || 'Uncategorized'}
+        </span>
+      </div>
+      <div className="mt-2 text-xs text-gray-600">
+        <div>Duration: {service.duration || 'N/A'}</div>
+        <div className="flex justify-between mt-1">
+          <span>
+            Original: ₱
+            {Number(originalPrice).toLocaleString(undefined, {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            })}
+          </span>
+          <span className="font-medium text-red-500">
+            {discountPercentage} off: ₱
+            {Number(discountedPrice).toLocaleString(undefined, {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            })}
+          </span>
         </div>
-        <div className="mt-2 text-xs text-gray-600">
-          <div>Duration: {service.duration}</div>
-          <div className="flex justify-between mt-1">
-            <span>
-              Original: ₱
-              {Number(service.originalPrice).toLocaleString(undefined, {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2,
-              })}
-            </span>
-            <span className="font-medium text-red-500">
-              {service.discountPercentage} off: ₱
-              {Number(service.discountedPrice).toLocaleString(undefined, {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2,
-              })}
-            </span>
-          </div>
-        </div>
-      </motion.div>
-    );
-  };
+      </div>
+    </motion.div>
+  );
+};
 
   return (
     <div className="flex flex-col h-screen bg-gray-50 text-gray-800">
@@ -704,7 +716,7 @@ const handleEdit = async (id) => {
               <Link href="/home" passHref>
                 <Menu.Button
                   as="div"
-                  className={`w-full p-3 rounded-lg text-left flex items-center cursor-pointer transition-all ${router.pathname === "/home" ? "bg-emerald-600 shadow-md" : "hover:bg-emerald-600/70"}`}
+                  className={`w-full p-3 rounded-lg text-left flex items-center cursor-pointer transition-all ${pathname === "/home" ? "bg-emerald-600 shadow-md" : "hover:bg-emerald-600/70"}`}
                 >
                   <div
                     className={`p-1.5 mr-3 rounded-lg ${router.pathname === "/home" ? "bg-white text-emerald-700" : "bg-emerald-900/30 text-white"}`}
