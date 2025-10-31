@@ -98,59 +98,25 @@ export default function Memberships() {
     fetchMemberships();
   }, []);
 
-  const fetchPremiumServices = async (membershipType) => {
+  const fetchMembershipServices = async (membershipId) => {
     try {
-      // Add debug logging
-      console.log(`Fetching premium services for: ${membershipType}`);
-
-      const res = await fetch(
-        `https://api.lizlyskincare.sbs/servicegroup.php?action=premium_services&membership_type=${membershipType}`
-      );
-
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        console.error("API Error:", {
-          status: res.status,
-          statusText: res.statusText,
-          errorData,
-        });
-        throw new Error(
-          `Failed to fetch services: ${res.status} ${res.statusText}`
+        const res = await fetch(
+            `https://api.lizlyskincare.sbs/servicegroup.php?action=membership_services&membership_id=${membershipId}`
         );
-      }
-
-      const data = await res.json();
-      console.log("Received services:", data);
-
-      if (!Array.isArray(data)) {
-        console.error("Expected array but got:", data);
-        return [];
-      }
-
-      return data.map((service) => ({
-        id: service.service_id,
-        name: service.name,
-        duration: service.duration ? `${service.duration} mins` : "N/A",
-        originalPrice: parseFloat(service.originalPrice),
-        price: `₱${parseFloat(service.originalPrice).toFixed(2)}`,
-        discountedPrice: service.discountedPrice
-          ? parseFloat(service.discountedPrice)
-          : null,
-        discountPercentage: service.discountPercentage || "50%",
-        description: service.description || "No description available",
-        category: service.category || "Uncategorized",
-        membershipType: service.membershipType || membershipType,
-      }));
+        
+        if (!res.ok) throw new Error('Failed to fetch membership services');
+        
+        const data = await res.json();
+        return Array.isArray(data) ? data : [];
     } catch (error) {
-      console.error("Error fetching premium services:", error);
-      toast.error("Failed to load services. Please try again.");
-      return [];
+        console.error('Error fetching membership services:', error);
+        return [];
     }
-  };
+};
 
   useEffect(() => {
     if (editMembership) {
-      fetchPremiumServices(editMembership.membershipType).then((services) => {
+      fetchMembershipServices(editMembership.id).then((services) => {
         setAllServices(services);
 
         const getServiceId = (s) => s.id ?? s.service_id;
@@ -384,40 +350,26 @@ const handleEdit = async (id) => {
   };
 
   const handleRowClick = async (membership) => {
-  setSelectedMembership(membership);
-  setIsLoadingServices(true);
+    setSelectedMembership(membership);
+    setIsLoadingServices(true);
 
-  try {
-    // Use the included_services from the membership data (fetched from API)
-    if (membership.included_services && membership.included_services.length > 0) {
-      // Format the services to match the expected structure
-      const formattedServices = membership.included_services.map(service => ({
-        id: service.service_id,
-        name: service.name,
-        duration: service.duration ? `${service.duration} mins` : "N/A",
-        originalPrice: parseFloat(service.price) || 0,
-        price: `₱${parseFloat(service.price || 0).toFixed(2)}`,
-        discountedPrice: service.price ? parseFloat(service.price) * 0.5 : 0, // 50% discount
-        discountPercentage: "50%",
-        description: service.description || "No description available",
-        category: service.category || "Uncategorized",
-        membershipType: membership.type,
-      }));
-      setMembershipServices(formattedServices);
-    } else {
-      // Fallback to fetching premium services if no included services
-      const services = await fetchPremiumServices(membership.type);
-      setMembershipServices(services);
+    try {
+        const services = await fetchMembershipServices(membership.id);
+        if (services.length > 0) {
+            setMembershipServices(services);
+        } else {
+            // Fallback to premium services
+            const premiumServices = await fetchPremiumServices(membership.type);
+            setMembershipServices(premiumServices);
+        }
+    } catch (error) {
+        console.error("Error loading services:", error);
+        toast.error("Failed to load services");
+        setMembershipServices([]);
+    } finally {
+        setIsLoadingServices(false);
     }
-  } catch (error) {
-    console.error("Error loading services:", error);
-    toast.error("Failed to load services");
-    setMembershipServices([]);
-  } finally {
-    setIsLoadingServices(false);
-  }
 };
-
   const closeMembershipDetails = () => {
     setSelectedMembership(null);
   };
