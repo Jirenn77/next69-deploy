@@ -138,7 +138,7 @@ export default function Memberships() {
           : null,
         discountPercentage: service.discountPercentage || "50%",
         description: service.description || "No description available",
-        category: service.category || "Uncategorized",
+        category: service.category || "", // removed "Uncategorized" fallback
         membershipType: service.membershipType || membershipType,
       }));
     } catch (error) {
@@ -397,7 +397,7 @@ const handleEdit = async (id) => {
         duration: service.duration ? `${service.duration} mins` : "N/A",
         originalPrice: parseFloat(service.price) || 0,
         price: `₱${parseFloat(service.price || 0).toFixed(2)}`,
-        discountedPrice: service.price ? parseFloat(service.price) * 0.5 : 0, // 50% discount
+        discountedPrice: service.price ? parseFloat(service.price) * 0.5 : 0,
         discountPercentage: "50%",
         description: service.description || "No description available",
         category: service.category || "Uncategorized",
