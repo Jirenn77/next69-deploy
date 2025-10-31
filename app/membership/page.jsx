@@ -268,7 +268,7 @@ const handleEdit = async (id) => {
   let included_services = [];
 
   if (type === "basic" || type === "pro") {
-    included_services = await fetchPremiumServices(type);
+    included_services = await fetchMembershipServices(type);
   } else {
     included_services = membershipToEdit.included_services || [];
   }
@@ -378,7 +378,7 @@ const handleEdit = async (id) => {
         } else {
             console.log("No services found, using fallback to premium services");
             // CORRECT FUNCTION NAME - remove the extra 's'
-            const premiumServices = await fetchPremiumServices(membership.type);
+            const premiumServices = await fetchMembershipServices(membership.type);
             setMembershipServices(premiumServices);
         }
     } catch (error) {
