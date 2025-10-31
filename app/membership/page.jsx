@@ -100,15 +100,29 @@ export default function Memberships() {
 
   const fetchMembershipServices = async (membershipId) => {
     try {
+        console.log(`Fetching membership services for ID: ${membershipId}`);
         const res = await fetch(
             `https://api.lizlyskincare.sbs/servicegroup.php?action=membership_services&membership_id=${membershipId}`
         );
         
-        if (!res.ok) throw new Error('Failed to fetch membership services');
+        if (!res.ok) {
+            throw new Error(`HTTP error! status: ${res.status}`);
+        }
         
-        const data = await res.json();
-        console.log('Membership services from API:', data);
-        return Array.isArray(data) ? data : [];
+        const responseText = await res.text();
+        console.log('Raw response:', responseText);
+        
+        // Try to parse JSON
+        try {
+            const data = JSON.parse(responseText);
+            console.log('Parsed membership services:', data);
+            return Array.isArray(data) ? data : [];
+        } catch (parseError) {
+            console.error('JSON parse error:', parseError);
+            console.error('Problematic response:', responseText);
+            return [];
+        }
+        
     } catch (error) {
         console.error('Error fetching membership services:', error);
         return [];
@@ -363,7 +377,7 @@ const handleEdit = async (id) => {
             setMembershipServices(services);
         } else {
             console.log("No services found, using fallback to premium services");
-            // Fallback to premium services
+            // Fallback to premium services - FIXED FUNCTION NAME
             const premiumServices = await fetchPremiumServices(membership.type);
             setMembershipServices(premiumServices);
         }
