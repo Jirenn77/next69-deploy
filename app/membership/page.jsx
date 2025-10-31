@@ -98,6 +98,37 @@ export default function Memberships() {
     fetchMemberships();
   }, []);
 
+  const fetchPremiumServices = async (membershipType) => {
+  try {
+    console.log(`Fetching premium services for: ${membershipType}`);
+    const res = await fetch(
+      `https://api.lizlyskincare.sbs/servicegroup.php?action=premium_services&type=${membershipType}`
+    );
+    
+    if (!res.ok) {
+      throw new Error(`HTTP error! status: ${res.status}`);
+    }
+    
+    const responseText = await res.text();
+    console.log('Raw premium services response:', responseText);
+    
+    try {
+      const data = JSON.parse(responseText);
+      console.log('Parsed premium services:', data);
+      
+      // Ensure we always return an array
+      return Array.isArray(data) ? data : [];
+    } catch (parseError) {
+      console.error('JSON parse error for premium services:', parseError);
+      console.error('Problematic response:', responseText);
+      return [];
+    }
+  } catch (error) {
+    console.error('Error fetching premium services:', error);
+    return [];
+  }
+};
+
   const fetchMembershipServices = async (membershipId) => {
     try {
         console.log(`Fetching membership services for ID: ${membershipId}`);
@@ -268,7 +299,7 @@ const handleEdit = async (id) => {
   let included_services = [];
 
   if (type === "basic" || type === "pro") {
-    included_services = await fetchMembershipServices(type);
+    included_services = await fetchPremiumServices(type);
   } else {
     included_services = membershipToEdit.included_services || [];
   }
@@ -378,7 +409,7 @@ const handleEdit = async (id) => {
         } else {
             console.log("No services found, using fallback to premium services");
             // CORRECT FUNCTION NAME - remove the extra 's'
-            const premiumServices = await fetchMembershipServices(membership.type);
+            const premiumServices = await fetchPremiumServices(membership.type);
             setMembershipServices(premiumServices);
         }
     } catch (error) {
