@@ -128,19 +128,19 @@ export default function Memberships() {
       }
 
       return data.map((service) => ({
-  id: service.service_id,
-  name: service.name,
-  duration: service.duration ? `${service.duration} mins` : "N/A",
-  originalPrice: parseFloat(service.originalPrice),
-  price: `₱${parseFloat(service.originalPrice).toFixed(2)}`,
-  discountedPrice: service.discountedPrice
-    ? parseFloat(service.discountedPrice)
-    : null,
-  discountPercentage: service.discountPercentage || "50%",
-  description: service.description || "No description available",
-  category: service.category || "", // Empty string instead of "Uncategorized"
-  membershipType: service.membershipType || membershipType,
-}));
+        id: service.service_id,
+        name: service.name,
+        duration: service.duration ? `${service.duration} mins` : "N/A",
+        originalPrice: parseFloat(service.originalPrice),
+        price: `₱${parseFloat(service.originalPrice).toFixed(2)}`,
+        discountedPrice: service.discountedPrice
+          ? parseFloat(service.discountedPrice)
+          : null,
+        discountPercentage: service.discountPercentage || "50%",
+        description: service.description || "No description available",
+        category: service.category || "Uncategorized",
+        membershipType: service.membershipType || membershipType,
+      }));
     } catch (error) {
       console.error("Error fetching premium services:", error);
       toast.error("Failed to load services. Please try again.");
@@ -388,21 +388,21 @@ const handleEdit = async (id) => {
   setIsLoadingServices(true);
 
   try {
-    // Use the included_services from the membership data
+    // Use the included_services from the membership data (fetched from API)
     if (membership.included_services && membership.included_services.length > 0) {
       // Format the services to match the expected structure
       const formattedServices = membership.included_services.map(service => ({
-  id: service.service_id,
-  name: service.name,
-  duration: service.duration ? `${service.duration} mins` : "N/A",
-  originalPrice: parseFloat(service.price) || 0,
-  price: `₱${parseFloat(service.price || 0).toFixed(2)}`,
-  discountedPrice: service.price ? parseFloat(service.price) * 0.5 : 0, // 50% discount
-  discountPercentage: "50%",
-  description: service.description || "No description available",
-  category: service.category || "", // Empty string instead of "Uncategorized"
-  membershipType: membership.type,
-}));
+        id: service.service_id,
+        name: service.name,
+        duration: service.duration ? `${service.duration} mins` : "N/A",
+        originalPrice: parseFloat(service.price) || 0,
+        price: `₱${parseFloat(service.price || 0).toFixed(2)}`,
+        discountedPrice: service.price ? parseFloat(service.price) * 0.5 : 0, // 50% discount
+        discountPercentage: "50%",
+        description: service.description || "No description available",
+        category: service.category || "Uncategorized",
+        membershipType: membership.type,
+      }));
       setMembershipServices(formattedServices);
     } else {
       // Fallback to fetching premium services if no included services
@@ -574,41 +574,39 @@ const handleEdit = async (id) => {
   };
 
   const ServiceCard = ({ service, membershipType }) => {
-  return (
-    <motion.div
-      className="border rounded-lg p-3 hover:shadow-md transition-shadow"
-      whileHover={{ y: -2 }}
-    >
-      <div className="flex justify-between items-start">
-        <h4 className="font-medium text-sm">{service.name}</h4>
-        {service.category && service.category !== "Uncategorized" && (
-          <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
-            {service.category}
-          </span>
-        )}
-      </div>
-      <div className="mt-2 text-xs text-gray-600">
-        <div>Duration: {service.duration}</div>
-        <div className="flex justify-between mt-1">
-          <span>
-            Original: ₱
-            {Number(service.originalPrice).toLocaleString(undefined, {
-              minimumFractionDigits: 2,
-              maximumFractionDigits: 2,
-            })}
-          </span>
-          <span className="font-medium text-red-500">
-            {service.discountPercentage} off: ₱
-            {Number(service.discountedPrice).toLocaleString(undefined, {
-              minimumFractionDigits: 2,
-              maximumFractionDigits: 2,
-            })}
-          </span>
+    return (
+      <motion.div
+        className="border rounded-lg p-3 hover:shadow-md transition-shadow"
+        whileHover={{ y: -2 }}
+      >
+        <div className="flex justify-between items-start">
+                            <h4 className="font-medium text-sm">{service.name}</h4>
+                          <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
+                            {service.category}
+                          </span>
         </div>
-      </div>
-    </motion.div>
-  );
-};
+        <div className="mt-2 text-xs text-gray-600">
+          <div>Duration: {service.duration}</div>
+          <div className="flex justify-between mt-1">
+            <span>
+              Original: ₱
+              {Number(service.originalPrice).toLocaleString(undefined, {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })}
+            </span>
+            <span className="font-medium text-red-500">
+              {service.discountPercentage} off: ₱
+              {Number(service.discountedPrice).toLocaleString(undefined, {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })}
+            </span>
+          </div>
+        </div>
+      </motion.div>
+    );
+  };
 
   return (
     <div className="flex flex-col h-screen bg-gray-50 text-gray-800">
@@ -1662,11 +1660,11 @@ const handleEdit = async (id) => {
                                 }}
                               />
                               <span className="truncate">
-  {service.name}
-  {service.category && (
-    <span className="text-gray-500"> ({service.category})</span>
-  )}
-</span>
+                                {service.name}{" "}
+                                <span className="text-gray-500">
+                                  ({service.category})
+                                </span>
+                              </span>
                             </label>
                           ))}
 
@@ -1698,11 +1696,11 @@ const handleEdit = async (id) => {
                                 className="flex justify-between items-center px-2 py-1 rounded hover:bg-gray-50 text-sm"
                               >
                                 <div>
-  {service.name}
-  {service.category && (
-    <span className="text-gray-400"> ({service.category})</span>
-  )}
-</div>
+                                  {service.name}{" "}
+                                  <span className="text-gray-400">
+                                    ({service.category})
+                                  </span>
+                                </div>
                                 <button
                                   onClick={() =>
                                     setSelectedServices((prev) =>
