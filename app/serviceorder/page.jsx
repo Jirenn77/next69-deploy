@@ -581,6 +581,9 @@ export default function ServiceOrderPage() {
         discountedPrice: service.discountedPrice
           ? parseFloat(service.discountedPrice)
           : null,
+        displayPrice: service.discountedPrice 
+          ? `₱${parseFloat(service.discountedPrice).toFixed(2)}` 
+          : `₱${parseFloat(service.originalPrice).toFixed(2)}`,
         discountPercentage: service.discountPercentage || "50%",
         description: service.description || "No description available",
         category: service.category || "Uncategorized",
