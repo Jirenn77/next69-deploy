@@ -309,30 +309,52 @@ export default function ArchivePage() {
   };
 
   const performArchive = async () => {
-    try {
-      const loadingToast = toast.loading("Running archive process...", {
-        description: "Checking for inactive customers...",
-      });
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      toast.dismiss(loadingToast);
+  try {
+    const loadingToast = toast.loading("Running archive process...", {
+      description: "Checking for inactive customers...",
+    });
+    
+    const response = await fetch("https://api.lizlyskincare.sbs/archive.php?action=run", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+    
+    const result = await response.json();
+    
+    toast.dismiss(loadingToast);
 
+    if (result.success) {
+      let description = `Successfully archived ${result.archived_count} inactive customers.`;
+      
+      if (result.total_processed > 0) {
+        description += ` Processed ${result.total_processed} customers.`;
+      }
+      
+      if (result.errors && result.errors.length > 0) {
+        description += ` ${result.error_count} errors occurred (check console for details).`;
+        console.warn('Archive process errors:', result.errors);
+      }
+      
       toast.success(`✅ Archive process completed`, {
-        description: `Successfully archived 3 inactive customers.`,
-        duration: 5000,
+        description: description,
+        duration: 6000,
       });
       
+      // Refresh the archived data
       fetchArchivedData();
-    } catch (error) {
-      console.error("Error running archive:", error);
-      toast.error("❌ Archive process error", {
-        description: "Network error occurred. Please check your connection.",
-        duration: 5000,
-      });
+    } else {
+      throw new Error(result.message || "Archive process failed");
     }
-  };
+  } catch (error) {
+    console.error("Error running archive:", error);
+    toast.error("❌ Archive process error", {
+      description: error.message || "Network error occurred. Please check your connection.",
+      duration: 5000,
+    });
+  }
+};
 
   // Sorting function
   const handleSort = (key) => {
@@ -1054,92 +1076,37 @@ export default function ArchivePage() {
             </div>
           </div>
 
-          {/* Menu Items with Active State Highlight */}
-          <div className="w-full px-4 space-y-1 overflow-y-auto flex-grow custom-scrollbar">
-            {/* Dashboard */}
-            <Link href="/home" passHref>
+          {/* Menu Items */}
+      <div className="w-full px-4 space-y-1 overflow-y-auto flex-grow custom-scrollbar">
+        {[
+          { path: "/home", icon: Home, label: "Dashboard" },
+          { path: "/roles", icon: Shield, label: "Role Settings" },
+          { path: "/employeeM", icon: Users, label: "Employee Management" },
+          { path: "/userManage", icon: Users, label: "User Management" },
+          { path: "/branchM", icon: Home, label: "Branch Management" },
+          { path: "/archivees", icon: Archive, label: "Archives" },
+        ].map((item) => (
+          <Link key={item.path} href={item.path} passHref>
+            <div
+              className={`w-full p-3 rounded-lg text-left flex items-center cursor-pointer transition-all ${pathname === item.path ? "bg-emerald-600 shadow-md" : "hover:bg-emerald-600/70"}`}
+            >
               <div
-                className={`w-full p-3 rounded-lg text-left flex items-center cursor-pointer transition-all ${pathname === "/home" ? "bg-emerald-600 shadow-md" : "hover:bg-emerald-600/70"}`}
+                className={`p-1.5 mr-3 rounded-lg ${pathname === item.path ? "bg-white text-emerald-700" : "bg-emerald-900/30 text-white"}`}
               >
-                <div
-                  className={`p-1.5 mr-3 rounded-lg ${pathname === "/home" ? "bg-white text-emerald-700" : "bg-emerald-900/30 text-white"}`}
-                >
-                  <Home size={18} />
-                </div>
-                <span>Dashboard</span>
-                {pathname === "/home" && (
-                  <motion.div
-                    className="ml-auto w-2 h-2 bg-white rounded-full"
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                  />
-                )}
+                <item.icon size={18} />
               </div>
-            </Link>
-
-            {/* Customer Management */}
-            <Link href="/customers" passHref>
-              <div
-                className={`w-full p-3 rounded-lg text-left flex items-center cursor-pointer transition-all ${pathname === "/customers" ? "bg-emerald-600 shadow-md" : "hover:bg-emerald-600/70"}`}
-              >
-                <div
-                  className={`p-1.5 mr-3 rounded-lg ${pathname === "/customers" ? "bg-white text-emerald-700" : "bg-emerald-900/30 text-white"}`}
-                >
-                  <Users size={18} />
-                </div>
-                <span>Customer Management</span>
-                {pathname === "/customers" && (
-                  <motion.div
-                    className="ml-auto w-2 h-2 bg-white rounded-full"
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                  />
-                )}
-              </div>
-            </Link>
-
-            {/* Archive - Active */}
-            <Link href="/archive" passHref>
-              <div
-                className={`w-full p-3 rounded-lg text-left flex items-center cursor-pointer transition-all ${pathname === "/archive" ? "bg-emerald-600 shadow-md" : "hover:bg-emerald-600/70"}`}
-              >
-                <div
-                  className={`p-1.5 mr-3 rounded-lg ${pathname === "/archive" ? "bg-white text-emerald-700" : "bg-emerald-900/30 text-white"}`}
-                >
-                  <Archive size={18} />
-                </div>
-                <span>Archives</span>
-                {pathname === "/archive" && (
-                  <motion.div
-                    className="ml-auto w-2 h-2 bg-white rounded-full"
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                  />
-                )}
-              </div>
-            </Link>
-
-            {/* User Management */}
-            <Link href="/userManage" passHref>
-              <div
-                className={`w-full p-3 rounded-lg text-left flex items-center cursor-pointer transition-all ${pathname === "/userManage" ? "bg-emerald-600 shadow-md" : "hover:bg-emerald-600/70"}`}
-              >
-                <div
-                  className={`p-1.5 mr-3 rounded-lg ${pathname === "/userManage" ? "bg-white text-emerald-700" : "bg-emerald-900/30 text-white"}`}
-                >
-                  <Users size={18} />
-                </div>
-                <span>User Management</span>
-                {pathname === "/userManage" && (
-                  <motion.div
-                    className="ml-auto w-2 h-2 bg-white rounded-full"
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                  />
-                )}
-              </div>
-            </Link>
-          </div>
+              <span>{item.label}</span>
+              {pathname === item.path && (
+                <motion.div
+                  className="ml-auto w-2 h-2 bg-white rounded-full"
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                />
+              )}
+            </div>
+          </Link>
+        ))}
+      </div>
 
           {/* Enhanced Sidebar Footer */}
           <motion.div
