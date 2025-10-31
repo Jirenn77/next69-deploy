@@ -107,6 +107,7 @@ export default function Memberships() {
         if (!res.ok) throw new Error('Failed to fetch membership services');
         
         const data = await res.json();
+        console.log('Membership services from API:', data);
         return Array.isArray(data) ? data : [];
     } catch (error) {
         console.error('Error fetching membership services:', error);
@@ -354,10 +355,14 @@ const handleEdit = async (id) => {
     setIsLoadingServices(true);
 
     try {
+        console.log("Fetching services for membership:", membership.id);
         const services = await fetchMembershipServices(membership.id);
+        
         if (services.length > 0) {
+            console.log("Loaded services from membership_services:", services);
             setMembershipServices(services);
         } else {
+            console.log("No services found, using fallback to premium services");
             // Fallback to premium services
             const premiumServices = await fetchPremiumServices(membership.type);
             setMembershipServices(premiumServices);
