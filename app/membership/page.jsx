@@ -105,11 +105,7 @@ useEffect(() => {
   }
 };
 
-  useEffect(() => {
-    fetchMemberships();
-  }, []);
-
-  const fetchPremiumServices = async (membershipType) => {
+const fetchPremiumServices = async (membershipType) => {
   try {
     console.log(`Fetching premium services for: ${membershipType}`);
     const res = await fetch(
@@ -126,8 +122,6 @@ useEffect(() => {
     try {
       const data = JSON.parse(responseText);
       console.log('Parsed premium services:', data);
-      
-      // Ensure we always return an array
       return Array.isArray(data) ? data : [];
     } catch (parseError) {
       console.error('JSON parse error for premium services:', parseError);
@@ -139,6 +133,11 @@ useEffect(() => {
     return [];
   }
 };
+
+  useEffect(() => {
+    fetchMemberships();
+    fetchPremiumServices();
+  }, []);
 
   const fetchMembershipServices = async (membershipId) => {
     try {
