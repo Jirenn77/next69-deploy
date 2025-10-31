@@ -377,7 +377,7 @@ const handleEdit = async (id) => {
             setMembershipServices(services);
         } else {
             console.log("No services found, using fallback to premium services");
-            // Fallback to premium services - FIXED FUNCTION NAME
+            // CORRECT FUNCTION NAME - remove the extra 's'
             const premiumServices = await fetchPremiumServices(membership.type);
             setMembershipServices(premiumServices);
         }
@@ -389,6 +389,7 @@ const handleEdit = async (id) => {
         setIsLoadingServices(false);
     }
 };
+
   const closeMembershipDetails = () => {
     setSelectedMembership(null);
   };
