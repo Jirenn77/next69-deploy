@@ -1795,13 +1795,13 @@ useEffect(() => {
               </Dialog.Title>
               <button
                 onClick={() => setIsBranchModalOpen(false)}
-                className="text-gray-700 hover:text-gray-900"
+                className="text-gray-500 hover:text-gray-700"
               >
                 <X size={24} />
               </button>
             </div>
 
-            <div className="space-y-3 max-h-96 overflow-y-auto">
+            <div className="space-y-3 max-h-96 overflow-y-auto texyt-gray-800">
               {availableBranches.map((branch) => (
                 <motion.button
                   key={branch.id}
@@ -1819,7 +1819,7 @@ useEffect(() => {
                   whileTap={{ scale: 0.99 }}
                 >
                   <div className="font-medium">{branch.name}</div>
-                  <div className="text-sm text-gray-900 mt-1">
+                  <div className="text-sm text-gray-700 mt-1">
                     {branch.address}
                   </div>
                   {selectedBranch?.id === branch.id && (
