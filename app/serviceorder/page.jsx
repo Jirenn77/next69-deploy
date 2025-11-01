@@ -1795,7 +1795,7 @@ useEffect(() => {
               </Dialog.Title>
               <button
                 onClick={() => setIsBranchModalOpen(false)}
-                className="text-gray-500 hover:text-gray-700"
+                className="text-gray-700 hover:text-gray-900"
               >
                 <X size={24} />
               </button>
@@ -1813,13 +1813,13 @@ useEffect(() => {
                   className={`w-full p-4 rounded-lg text-left border transition-colors ${
                     selectedBranch?.id === branch.id
                       ? 'border-blue-500 bg-blue-50 text-blue-700'
-                      : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50'
+                      : 'border-gray-300 hover:border-blue-300 hover:bg-blue-50'
                   }`}
                   whileHover={{ scale: 1.01 }}
                   whileTap={{ scale: 0.99 }}
                 >
                   <div className="font-medium">{branch.name}</div>
-                  <div className="text-sm text-gray-500 mt-1">
+                  <div className="text-sm text-gray-900 mt-1">
                     {branch.address}
                   </div>
                   {selectedBranch?.id === branch.id && (
