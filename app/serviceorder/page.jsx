@@ -677,8 +677,8 @@ export default function ServiceOrderPage() {
     )
     .reduce((sum, service) => sum + service.price * service.quantity, 0);
 
-  // Calculate membership eligibility
-  const canUseDiscountServices =
+  // Calculate membership eligibility - ONLY for premium services
+const canUseDiscountServices =
   isMember &&
   useMembership &&
   !selectedCustomer?.isExpired &&
@@ -687,12 +687,12 @@ export default function ServiceOrderPage() {
     // New members can use discounts ONLY when balance is 0 or less
     (isNewMember && membershipBalance <= 0));
 
-// Apply 50% discount only if eligible
+// Apply 50% discount only if eligible - ONLY for premium services
 const membershipDiscountAmount = canUseDiscountServices
   ? premiumSubtotal * 0.5
   : 0;
 
-// Calculate membership balance deduction - ONLY for eligible premium services
+// Calculate membership balance deduction - ONLY for premium services
 const membershipBalanceDeduction =
   isMember &&
   useMembership &&
@@ -700,33 +700,27 @@ const membershipBalanceDeduction =
   !selectedCustomer?.isExpired &&
   isNewMember // Only new members use balance
     ? (() => {
-        // Only consider premium services (not promos/bundles) for balance deduction
-        const eligibleServicesForBalance = selectedServices
+        // ONLY consider premium services for balance deduction
+        const eligiblePremiumServicesTotal = selectedServices
           .filter(s => 
+            premiumServiceIds.includes(s.id) && // Must be premium service
             !s.isFromPromo && 
-            !s.isFromBundle && 
-            premiumServiceIds.includes(s.id) // Only premium services
+            !s.isFromBundle
           )
           .reduce((sum, s) => sum + s.price * (s.quantity || 1), 0);
 
-        // Apply 50% discount first, then use balance for remaining
-        const amountAfterMembershipDiscount = Math.max(
-          eligibleServicesForBalance - membershipDiscountAmount, 
-          0
-        );
-
-        return Math.min(membershipBalance, amountAfterMembershipDiscount);
+        // For new members: use balance for premium services only
+        return Math.min(membershipBalance, eligiblePremiumServicesTotal);
       })()
     : 0;
 
-  // Unified membership reduction for total calculation
-  // In the membership reduction calculation
-  const membershipReductionUsed =
-    isMember && useMembership
-      ? isNewMember
-        ? membershipBalanceDeduction // new members
-        : membershipDiscountAmount // existing members
-      : 0;
+// Unified membership reduction for total calculation
+const membershipReductionUsed =
+  isMember && useMembership
+    ? isNewMember
+      ? membershipBalanceDeduction // new members use balance for premium services
+      : membershipDiscountAmount // existing members get 50% discount on premium services
+    : 0;
 
   const updateQuantity = (serviceId, newQuantity) => {
     setSelectedServices((prev) =>
@@ -2070,24 +2064,40 @@ const membershipBalanceDeduction =
                               </p>
 
                               {isMember &&
-  membershipServices.some((p) => p.id === service.id) && (
-    <span className="inline-block mt-2 px-2 py-0.5 text-xs bg-emerald-100 text-emerald-800 rounded-full">
-      {canUseDiscountServices
-        ? "50% Member Discount Applied"
-        : membershipBalance > 0 && isNewMember
-        ? "Can use membership balance"
-        : "Member Discount Available"}
+membershipServices.some((p) => p.id === service.id) &&
+useMembership ? (
+  <>
+    {/* Show discounted price for premium services */}
+    <span className="font-bold text-emerald-600">
+      {formatCurrency(service.price * 0.5)}
     </span>
-)}
-
-{(service.isFromPromo || service.isFromBundle) && isMember && (
-  <span className="inline-block mt-1 px-2 py-0.5 text-xs bg-gray-100 text-gray-600 rounded-full ml-1">
-    {service.isFromPromo
-      ? "Promo - No membership benefits"
-      : "Bundle - No membership benefits"}
+    <div className="text-xs text-gray-500 line-through">
+      {formatCurrency(service.price)}
+    </div>
+    {isNewMember && membershipBalance > 0 && (
+      <div className="text-xs text-purple-600 font-medium">
+        Uses Membership Balance
+      </div>
+    )}
+  </>
+) : (
+  /* Regular price for non-premium services */
+  <span className="font-bold text-emerald-600">
+    {formatCurrency(service.price)}
   </span>
 )}
 
+
+                              {/* Add badges for promo/bundle services that CANNOT use balance */}
+                              {(service.isFromPromo || service.isFromBundle) &&
+                                isNewMember &&
+                                membershipBalance > 0 && (
+                                  <span className="inline-block mt-1 px-2 py-0.5 text-xs bg-gray-100 text-gray-600 rounded-full ml-1">
+                                    {service.isFromPromo
+                                      ? "Promo - No balance used"
+                                      : "Bundle - No balance used"}
+                                  </span>
+                                )}
                             </motion.div>
                           ))}
                         </div>
@@ -3266,9 +3276,9 @@ const membershipBalanceDeduction =
                       )}
 
                       {/* Membership */}
-                     {isMember && useMembership && (
+                      {isMember && useMembership && (
   <>
-    {/* Show 50% discount for premium services */}
+    {/* Show 50% discount for premium services (regular members) */}
     {!isNewMember && membershipDiscountAmount > 0 && (
       <div className="flex justify-between text-emerald-600">
         <span>Membership Discount (50% on premium services):</span>
@@ -3276,7 +3286,7 @@ const membershipBalanceDeduction =
       </div>
     )}
 
-    {/* Show balance deduction for new members with balance (premium services only) */}
+    {/* Show balance deduction for premium services (new members) */}
     {isNewMember && membershipBalanceDeduction > 0 && (
       <div className="flex justify-between text-purple-600">
         <span>Membership Balance Used (premium services only):</span>
@@ -3284,15 +3294,22 @@ const membershipBalanceDeduction =
       </div>
     )}
 
-    {/* Show note about excluded services */}
-    {(membershipDiscountAmount > 0 || membershipBalanceDeduction > 0) &&
-      selectedServices.some(s => s.isFromPromo || s.isFromBundle) && (
-        <div className="text-xs text-gray-500 bg-gray-50 p-2 rounded mt-2">
-          💡 Membership benefits only apply to premium services. Promo and bundle services are excluded.
-        </div>
+    {/* Show breakdown of what's included/excluded */}
+    {(membershipDiscountAmount > 0 || membershipBalanceDeduction > 0) && (
+      <div className="text-xs text-gray-500 bg-gray-50 p-2 rounded mt-2">
+        <div className="font-medium mb-1">Membership Benefits Applied To:</div>
+        <div>✓ Premium Services: {formatCurrency(premiumSubtotal)}</div>
+        {selectedServices.some(s => !premiumServiceIds.includes(s.id) && !s.isFromPromo && !s.isFromBundle) && (
+          <div className="text-gray-400">✗ Regular Services: No membership benefits</div>
+        )}
+        {selectedServices.some(s => s.isFromPromo || s.isFromBundle) && (
+          <div className="text-gray-400">✗ Promo/Bundle Services: No membership benefits</div>
+        )}
+      </div>
     )}
   </>
 )}
+
 
                       {/* Total */}
                       <div className="border-t pt-3 mt-3">
