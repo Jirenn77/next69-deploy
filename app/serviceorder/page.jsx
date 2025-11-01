@@ -698,13 +698,14 @@ export default function ServiceOrderPage() {
   membershipBalance > 0 &&
   !selectedCustomer?.isExpired
     ? (() => {
-        // Only include services that are NOT eligible for 50% discount
+        // ONLY include services that ARE eligible for 50% discount (premium services)
         const eligibleServicesTotal = selectedServices
           .filter((s) => 
             !s.isFromPromo && 
             !s.isFromBundle &&
-            // Exclude services that get 50% discount
-            !(premiumServiceIds.includes(s.id) && canUseDiscountServices)
+            // ONLY include services that get 50% discount
+            premiumServiceIds.includes(s.id) && 
+            canUseDiscountServices
           )
           .reduce((sum, s) => sum + s.price * (s.quantity || 1), 0);
 
@@ -2062,14 +2063,14 @@ export default function ServiceOrderPage() {
                                 {service.duration}
                               </p>
 
-{isMember &&
+                              {isMember &&
   membershipServices.some((p) => p.id === service.id) && (
     <span className="inline-block mt-2 px-2 py-0.5 text-xs bg-emerald-100 text-emerald-800 rounded-full">
       {canUseDiscountServices
-        ? "50% Member Discount Applied"
-        : membershipBalance > 0 && !canUseDiscountServices
-          ? "Can use membership balance"
-          : "Member Discount Available"}
+        ? "50% Member Discount - Uses Balance"
+        : membershipBalance > 0
+          ? "Member Discount Available"
+          : "Member Service"}
     </span>
 )}
 
@@ -2324,7 +2325,7 @@ export default function ServiceOrderPage() {
       <span>-{formatCurrency(membershipBalanceDeduction)}</span>
     </div>
     <div className="text-xs text-gray-500 bg-gray-50 p-2 rounded">
-      💡 Balance only used for non-discounted services
+      💡 Balance only used for premium services with 50% discount
     </div>
   </>
 )}
