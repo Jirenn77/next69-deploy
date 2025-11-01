@@ -142,6 +142,9 @@ export default function ServiceOrderPage() {
   const [promoSearch, setPromoSearch] = useState("");
   const [bundleSearch, setBundleSearch] = useState("");
   const [bundleQuantities, setBundleQuantities] = useState({});
+  const [availableBranches, setAvailableBranches] = useState([]);
+const [selectedBranch, setSelectedBranch] = useState(null);
+const [isBranchModalOpen, setIsBranchModalOpen] = useState(false);
 
   // Function to detect if selected services form a complete bundle
   const detectBundleFromSelectedServices = useCallback(() => {
@@ -191,6 +194,33 @@ export default function ServiceOrderPage() {
 
     return null;
   }, [selectedServices, bundles, bundleServiceMap]);
+
+  // Add this useEffect with your other useEffects
+useEffect(() => {
+  const fetchBranches = async () => {
+    try {
+      const response = await fetch("https://api.lizlyskincare.sbs/branches.php");
+      if (response.ok) {
+        const data = await response.json();
+        setAvailableBranches(data);
+        
+        // Auto-select current user's branch
+        if (currentUser?.branch_id) {
+          const userBranch = data.find(branch => branch.id === currentUser.branch_id);
+          if (userBranch) {
+            setSelectedBranch(userBranch);
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Failed to fetch branches:", error);
+    }
+  };
+
+  if (currentUser?.role === 'admin') {
+    fetchBranches();
+  }
+}, [currentUser]);
 
   // Call bundle detection when services change (only for new selections, not removals)
   useEffect(() => {
@@ -753,6 +783,13 @@ export default function ServiceOrderPage() {
       return;
     }
 
+    // Determine which branch to use
+  const finalBranch = currentUser?.role === 'admin' && selectedBranch 
+    ? selectedBranch 
+    : currentUser;
+
+     console.log("Using branch data:", finalBranch); // Debug log
+
     // Get current user data
     const currentUserResponse = await fetch(
       "https://api.lizlyskincare.sbs/branches.php?action=user",
@@ -819,17 +856,17 @@ export default function ServiceOrderPage() {
       new_membership_balance: newBalance,
 
       // Use actual user data - remove fallbacks to see what's really being sent
-      employee_name: currentUserData?.name,
-      employee_id: currentUserData?.id,
-      branch_name: currentUserData?.branch_name,
-      branch_id: currentUserData?.branch_id,
-      handledBy: currentUserData?.name,
-      branch: currentUserData?.branch_name || currentUserData?.branch,
+      employee_name: finalBranch?.name || currentUser?.name,
+    employee_id: finalBranch?.id || currentUser?.id,
+    branch_name: finalBranch?.branch_name || finalBranch?.branch,
+    branch_id: finalBranch?.branch_id || finalBranch?.id,
+    handledBy: finalBranch?.name || currentUser?.name,
+    branch: finalBranch?.branch_name || finalBranch?.branch,
 
       is_member: isMember,
-      membership_type: isMember ? membershipType : null,
-      date: new Date().toISOString(),
-    };
+    membership_type: isMember ? membershipType : null,
+    date: new Date().toISOString(),
+  };
 
     try {
       const response = await fetch("https://api.lizlyskincare.sbs/saveAcquire.php", {
@@ -1638,25 +1675,45 @@ export default function ServiceOrderPage() {
             className="bg-white rounded-xl shadow-sm border border-gray-200 p-6"
           >
             {/* Header */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
-              <div>
-                <h1 className="text-2xl font-bold text-gray-800">
-                  Service Acquire
-                </h1>
-                <p className="text-sm text-gray-500 mt-1">
-                  Process customer service purchases
-                </p>
-              </div>
+<div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
+  <div>
+    <h1 className="text-2xl font-bold text-gray-800">
+      Service Acquire
+    </h1>
+    <p className="text-sm text-gray-500 mt-1">
+      Process customer service purchases
+      {selectedBranch && (
+        <span className="ml-2 text-emerald-600 font-medium">
+          • Branch: {selectedBranch.name}
+        </span>
+      )}
+    </p>
+  </div>
 
-              {/* Current step indicator for mobile */}
-              <div className="md:hidden mt-4 w-full">
-                <div className="flex items-center justify-center bg-gray-100 rounded-full px-4 py-2">
-                  <span className="text-sm font-medium">
-                    Step {currentStep} of 4 - {getStepName(currentStep)}
-                  </span>
-                </div>
-              </div>
-            </div>
+  <div className="flex items-center gap-3 mt-4 md:mt-0">
+    {/* Branch Selection for Admin */}
+    {currentUser?.role === 'admin' && (
+      <motion.button
+        onClick={() => setIsBranchModalOpen(true)}
+        className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm"
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.95 }}
+      >
+        <Layers size={16} />
+        {selectedBranch ? `Branch: ${selectedBranch.name}` : 'Select Branch'}
+      </motion.button>
+    )}
+
+    {/* Current step indicator for mobile */}
+    <div className="md:hidden">
+      <div className="flex items-center justify-center bg-gray-100 rounded-full px-4 py-2">
+        <span className="text-sm font-medium">
+          Step {currentStep} of 4 - {getStepName(currentStep)}
+        </span>
+      </div>
+    </div>
+  </div>
+</div>
 
             {/* Step Indicator - Desktop */}
             <div className="hidden md:flex mb-8 relative">
@@ -1681,6 +1738,96 @@ export default function ServiceOrderPage() {
                       {getStepName(step)}
                     </span>
                   </motion.div>
+
+                  {/* Branch Selection Modal */}
+<Transition appear show={isBranchModalOpen} as={Fragment}>
+  <Dialog
+    as="div"
+    className="relative z-50"
+    onClose={() => setIsBranchModalOpen(false)}
+  >
+    <Transition.Child
+      as={Fragment}
+      enter="ease-out duration-300"
+      enterFrom="opacity-0"
+      enterTo="opacity-100"
+      leave="ease-in duration-200"
+      leaveFrom="opacity-100"
+      leaveTo="opacity-0"
+    >
+      <div className="fixed inset-0 bg-black bg-opacity-25" />
+    </Transition.Child>
+
+    <div className="fixed inset-0 overflow-y-auto">
+      <div className="flex min-h-full items-center justify-center p-4 text-center">
+        <Transition.Child
+          as={Fragment}
+          enter="ease-out duration-300"
+          enterFrom="opacity-0 scale-95"
+          enterTo="opacity-100 scale-100"
+          leave="ease-in duration-200"
+          leaveFrom="opacity-100 scale-100"
+          leaveTo="opacity-0 scale-95"
+        >
+          <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-2xl bg-white p-6 text-left align-middle shadow-xl transition-all">
+            <div className="flex justify-between items-center mb-4">
+              <Dialog.Title
+                as="h3"
+                className="text-lg font-semibold text-gray-900"
+              >
+                Select Branch
+              </Dialog.Title>
+              <button
+                onClick={() => setIsBranchModalOpen(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            <div className="space-y-3 max-h-96 overflow-y-auto">
+              {availableBranches.map((branch) => (
+                <motion.button
+                  key={branch.id}
+                  onClick={() => {
+                    setSelectedBranch(branch);
+                    setIsBranchModalOpen(false);
+                    toast.success(`Branch switched to ${branch.name}`);
+                  }}
+                  className={`w-full p-4 rounded-lg text-left border transition-colors ${
+                    selectedBranch?.id === branch.id
+                      ? 'border-blue-500 bg-blue-50 text-blue-700'
+                      : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50'
+                  }`}
+                  whileHover={{ scale: 1.01 }}
+                  whileTap={{ scale: 0.99 }}
+                >
+                  <div className="font-medium">{branch.name}</div>
+                  <div className="text-sm text-gray-500 mt-1">
+                    {branch.address}
+                  </div>
+                  {selectedBranch?.id === branch.id && (
+                    <div className="flex items-center mt-2 text-sm text-blue-600">
+                      <CheckCircle size={16} className="mr-1" />
+                      Currently Selected
+                    </div>
+                  )}
+                </motion.button>
+              ))}
+            </div>
+
+            {availableBranches.length === 0 && (
+              <div className="text-center py-8 text-gray-500">
+                <Layers size={48} className="mx-auto mb-3 text-gray-300" />
+                <p>No branches available</p>
+              </div>
+            )}
+          </Dialog.Panel>
+        </Transition.Child>
+      </div>
+    </div>
+  </Dialog>
+</Transition>
 
                   {step < 4 && (
                     <motion.div
@@ -3409,7 +3556,7 @@ export default function ServiceOrderPage() {
                           Lizly Skin Care Clinic
                         </h3>
                         <p className="text-sm text-gray-500">
-                          Condoy Building Room 201, Pabayo Gomez Street, CDO
+                         {savedOrderData.branch_name || "Condoy Building Room 201, Pabayo Gomez Street, CDO"}
                         </p>
                         <p className="text-sm text-gray-500">
                           Phone: (02) 1234-5678
@@ -3432,6 +3579,11 @@ export default function ServiceOrderPage() {
                             }
                           )}
                         </p>
+    {savedOrderData.branch_name && (
+      <p className="text-sm text-emerald-600 font-medium mt-1">
+        Branch: {savedOrderData.branch_name}
+      </p>
+    )}
                       </div>
                     </div>
 

@@ -679,27 +679,34 @@ export default function ServiceOrderPage() {
 
   // Apply 50% discount only if eligible
   const membershipDiscountAmount = canUseDiscountServices
-    ? premiumSubtotal * 0.5
+    ? selectedServices
+        .filter((s) => 
+          !s.isFromPromo && 
+          !s.isFromBundle &&
+          premiumServiceIds.includes(s.id)
+        )
+        .reduce((sum, service) => sum + service.price * service.quantity * 0.5, 0)
     : 0;
 
   const membershipBalanceDeduction =
-    isMember &&
-    useMembership &&
-    membershipBalance > 0 &&
-    !selectedCustomer?.isExpired // ✅ ADD expiration check here only
-      ? (() => {
-          const eligibleServicesTotal = selectedServices
-            .filter((s) => !s.isFromPromo && !s.isFromBundle)
-            .reduce((sum, s) => sum + s.price * (s.quantity || 1), 0);
+  isMember &&
+  useMembership &&
+  membershipBalance > 0 &&
+  !selectedCustomer?.isExpired
+    ? (() => {
+        // Only include premium services that get 50% discount
+        const eligibleServicesTotal = selectedServices
+          .filter((s) => 
+            !s.isFromPromo && 
+            !s.isFromBundle &&
+            premiumServiceIds.includes(s.id) && 
+            canUseDiscountServices
+          )
+          .reduce((sum, s) => sum + (s.price * (s.quantity || 1)) * 0.5, 0); // 50% of the service price
 
-          const amountAfterMembershipDiscount =
-            !isNewMember && membershipDiscountAmount > 0
-              ? Math.max(eligibleServicesTotal - membershipDiscountAmount, 0)
-              : eligibleServicesTotal;
-
-          return Math.min(membershipBalance, amountAfterMembershipDiscount);
-        })()
-      : 0;
+        return Math.min(membershipBalance, eligibleServicesTotal);
+      })()
+    : 0;  
 
   // Unified membership reduction for total calculation
   // In the membership reduction calculation
