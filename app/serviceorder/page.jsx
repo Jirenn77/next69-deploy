@@ -2080,7 +2080,6 @@ const membershipBalanceDeduction =
     </span>
 )}
 
-// Add clear indicators for ineligible services
 {(service.isFromPromo || service.isFromBundle) && isMember && (
   <span className="inline-block mt-1 px-2 py-0.5 text-xs bg-gray-100 text-gray-600 rounded-full ml-1">
     {service.isFromPromo
