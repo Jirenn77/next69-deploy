@@ -1801,7 +1801,7 @@ useEffect(() => {
               </button>
             </div>
 
-            <div className="space-y-3 max-h-96 overflow-y-auto texyt-gray-800">
+            <div className="space-y-3 max-h-96 overflow-y-auto text-gray-800">
               {availableBranches.map((branch) => (
                 <motion.button
                   key={branch.id}
