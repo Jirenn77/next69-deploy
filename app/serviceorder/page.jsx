@@ -204,9 +204,9 @@ useEffect(() => {
         const data = await response.json();
         setAvailableBranches(data);
         
-        // Auto-select current user's branch
-        if (currentUser?.branch_id) {
-          const userBranch = data.find(branch => branch.id === currentUser.branch_id);
+        // Auto-select current user's branch for admin, or first branch
+        if (currentUser?.role === 'admin') {
+          const userBranch = data.find(branch => branch.id === currentUser.branch_id) || data[0];
           if (userBranch) {
             setSelectedBranch(userBranch);
           }
@@ -778,164 +778,180 @@ useEffect(() => {
   };
 
   const confirmSave = async () => {
-    if (!selectedCustomer || selectedServices.length === 0) {
-      toast.warning("Please select a customer and at least one service.");
-      return;
+  if (!selectedCustomer || selectedServices.length === 0) {
+    toast.warning("Please select a customer and at least one service.");
+    return;
+  }
+
+  // Determine which branch to use - FIXED LOGIC
+  let finalBranchData = null;
+  
+  if (currentUser?.role === 'admin' && selectedBranch) {
+    // Admin with selected branch
+    finalBranchData = {
+      branch_id: selectedBranch.id,
+      branch_name: selectedBranch.name,
+      branch: selectedBranch.name,
+      employee_name: currentUser?.name || 'Admin',
+      employee_id: currentUser?.id,
+      handledBy: currentUser?.name || 'Admin'
+    };
+  } else {
+    // Non-admin or admin without branch selection - use current user's branch
+    finalBranchData = {
+      branch_id: currentUser?.branch_id,
+      branch_name: currentUser?.branch_name || currentUser?.branch,
+      branch: currentUser?.branch_name || currentUser?.branch,
+      employee_name: currentUser?.name,
+      employee_id: currentUser?.id,
+      handledBy: currentUser?.name
+    };
+  }
+
+  console.log("Final Branch Data:", finalBranchData);
+  console.log("Current User:", currentUser);
+  console.log("Selected Branch:", selectedBranch);
+
+  let appliedMembershipDiscount = 0;
+  let appliedMembershipBalance = 0;
+
+  if (isMember && useMembership) {
+    if (membershipBalanceDeduction > 0) {
+      appliedMembershipBalance = membershipBalanceDeduction;
+      appliedMembershipDiscount = 0;
+    } else {
+      appliedMembershipDiscount = membershipDiscountAmount || 0;
+      appliedMembershipBalance = 0;
     }
+  }
 
-    // Determine which branch to use
-  const finalBranch = currentUser?.role === 'admin' && selectedBranch 
-    ? selectedBranch 
-    : currentUser;
+  const servicesTotal = selectedServices.reduce(
+    (sum, service) => sum + service.price * (service.quantity || 1),
+    0
+  );
 
-     console.log("Using branch data:", finalBranch); // Debug log
+  const newBalance =
+    isMember && useMembership && appliedMembershipBalance > 0
+      ? Math.max(0, membershipBalance - appliedMembershipBalance)
+      : membershipBalance;
 
-    // Get current user data
-    const currentUserResponse = await fetch(
-      "https://api.lizlyskincare.sbs/branches.php?action=user",
-      {
-        credentials: "include",
-      }
-    );
-    const currentUserData = await currentUserResponse.json();
+  setMembershipBalance(newBalance);
 
-    console.log("Current User Data:", currentUserData); // Debug log
+  const grandTotal = Math.max(
+    0,
+    servicesTotal -
+      (promoReduction || 0) -
+      (discountReduction || 0) -
+      appliedMembershipDiscount -
+      appliedMembershipBalance
+  );
 
-    let appliedMembershipDiscount = 0;
-    let appliedMembershipBalance = 0;
+  const orderData = {
+    order_number: orderNumber,
+    customer_id: selectedCustomer.id,
+    customer_name: customerName,
+    services: selectedServices.map((service) => ({
+      service_id: service.id,
+      name: service.name,
+      price: service.price,
+      quantity: service.quantity,
+    })),
+    subtotal: servicesTotal,
+    promoReduction: promoReduction || 0,
+    discountReduction: discountReduction || 0,
+    discount: discount,
+    promo: promoApplied || null,
+    membershipDiscount: appliedMembershipDiscount,
+    membershipBalanceDeduction: appliedMembershipBalance,
+    grand_total: grandTotal,
+    new_membership_balance: newBalance,
 
-    if (isMember && useMembership) {
-      if (membershipBalanceDeduction > 0) {
-        appliedMembershipBalance = membershipBalanceDeduction;
-        appliedMembershipDiscount = 0;
-      } else {
-        appliedMembershipDiscount = membershipDiscountAmount || 0;
-        appliedMembershipBalance = 0;
-      }
-    }
+    // Use the determined branch data
+    employee_name: finalBranchData.employee_name,
+    employee_id: finalBranchData.employee_id,
+    branch_name: finalBranchData.branch_name,
+    branch_id: finalBranchData.branch_id,
+    handledBy: finalBranchData.handledBy,
+    branch: finalBranchData.branch,
 
-    const servicesTotal = selectedServices.reduce(
-      (sum, service) => sum + service.price * (service.quantity || 1),
-      0
-    );
+    // Add explicit flags for admin branch selection
+    is_admin: currentUser?.role === 'admin',
+    selected_branch_id: selectedBranch?.id,
+    selected_branch_name: selectedBranch?.name,
 
-    const newBalance =
-      isMember && useMembership && appliedMembershipBalance > 0
-        ? Math.max(0, membershipBalance - appliedMembershipBalance)
-        : membershipBalance;
-
-    setMembershipBalance(newBalance);
-
-    const grandTotal = Math.max(
-      0,
-      servicesTotal -
-        (promoReduction || 0) -
-        (discountReduction || 0) -
-        appliedMembershipDiscount -
-        appliedMembershipBalance
-    );
-
-    const orderData = {
-      order_number: orderNumber,
-      customer_id: selectedCustomer.id,
-      customer_name: customerName,
-      services: selectedServices.map((service) => ({
-        service_id: service.id,
-        name: service.name,
-        price: service.price,
-        quantity: service.quantity,
-      })),
-      subtotal: servicesTotal,
-      promoReduction: promoReduction || 0,
-      discountReduction: discountReduction || 0,
-      discount: discount,
-      promo: promoApplied || null,
-      membershipDiscount: appliedMembershipDiscount,
-      membershipBalanceDeduction: appliedMembershipBalance,
-      grand_total: grandTotal,
-      new_membership_balance: newBalance,
-
-      // Use actual user data - remove fallbacks to see what's really being sent
-      employee_name: finalBranch?.name || currentUser?.name,
-    employee_id: finalBranch?.id || currentUser?.id,
-    branch_name: finalBranch?.branch_name || finalBranch?.branch,
-    branch_id: finalBranch?.branch_id || finalBranch?.id,
-    handledBy: finalBranch?.name || currentUser?.name,
-    branch: finalBranch?.branch_name || finalBranch?.branch,
-
-      is_member: isMember,
+    is_member: isMember,
     membership_type: isMember ? membershipType : null,
     date: new Date().toISOString(),
   };
 
+  console.log("Sending Order Data:", orderData);
+
+  try {
+    const response = await fetch("https://api.lizlyskincare.sbs/saveAcquire.php", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(orderData),
+    });
+
+    const text = await response.text();
+    console.log("Server Response:", text);
+
     try {
-      const response = await fetch("https://api.lizlyskincare.sbs/saveAcquire.php", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(orderData), // Send the complete orderData
-      });
+      const result = JSON.parse(text);
 
-      const text = await response.text();
-      console.log("Server Response:", text); // Debug log
+      if (result.message) {
+        toast.success("Service acquired successfully!");
 
-      try {
-        const result = JSON.parse(text);
+        // ✅ CRITICAL FIX: Preserve our branch selection over server response
+        const finalOrderData = {
+          ...orderData, // Start with OUR data
+          // Only override financial calculations, not branch/handledBy
+          grand_total: result.calculated_total ?? orderData.grand_total,
+          new_membership_balance: result.new_balance ?? orderData.new_membership_balance,
+          membership_balance_updated: result.membership_balance_updated,
 
-        if (result.message) {
-          toast.success("Service acquired successfully!");
+          // ✅ PRESERVE OUR BRANCH SELECTION - don't let server override
+          branch: orderData.branch, // Use OUR branch selection
+          branch_name: orderData.branch_name, // Use OUR branch selection
+          handled_by: orderData.handledBy, // Use OUR handledBy
+          handledBy: orderData.handledBy, // Use OUR handledBy
+          employee_name: orderData.employee_name, // Use OUR employee_name
 
-          // ✅ CRITICAL FIX: Use server response data instead of local orderData
-          const finalOrderData = {
-            ...orderData, // Start with local data
-            // Override with server-provided data (this is what matters!)
-            grand_total: result.calculated_total ?? orderData.grand_total,
-            new_membership_balance:
-              result.new_balance ?? orderData.new_membership_balance,
-            membership_balance_updated: result.membership_balance_updated,
+          // Include server debug info but don't use it for display
+          server_response: result,
+        };
 
-            // ✅ USE THE SERVER'S BRANCH AND HANDLED_BY DATA
-            branch: result.branch ?? result.branch_name ?? orderData.branch,
-            branch_name:
-              result.branch_name ?? result.branch ?? orderData.branch_name,
-            handled_by: result.handled_by ?? orderData.handledBy,
-            handledBy: result.handled_by ?? orderData.handledBy,
-            employee_name: result.handled_by ?? orderData.employee_name,
+        console.log("Final Order Data for Display:", finalOrderData);
 
-            // Include server debug info
-            server_response: result,
-          };
-
-          console.log("Final Order Data for Display:", finalOrderData); // Debug log
-
-          setMembershipBalance(finalOrderData.new_membership_balance);
-          setSavedOrderData(finalOrderData);
-          setCurrentStep(4);
-
-          // ✅ Check if we should remove new member badge (when balance is used up)
-          if (isNewMember && finalOrderData.new_membership_balance <= 0) {
-            try {
-              if (selectedCustomer?.id) {
-                localStorage.removeItem(`newMember:${selectedCustomer.id}`);
-              }
-            } catch (_) {}
-            setIsNewMember(false);
-          }
-        } else {
-          toast.error(result.error || "Save failed");
-        }
-      } catch (parseErr) {
-        console.error("Invalid JSON from server:", text);
-        // Even if JSON is invalid, use the local data but log it
-        console.log("Using local orderData due to JSON error:", orderData);
-        setSavedOrderData(orderData);
+        setMembershipBalance(finalOrderData.new_membership_balance);
+        setSavedOrderData(finalOrderData);
         setCurrentStep(4);
-        toast.warning("Saved locally but server returned invalid JSON");
+
+        // ✅ Check if we should remove new member badge
+        if (isNewMember && finalOrderData.new_membership_balance <= 0) {
+          try {
+            if (selectedCustomer?.id) {
+              localStorage.removeItem(`newMember:${selectedCustomer.id}`);
+            }
+          } catch (_) {}
+          setIsNewMember(false);
+        }
+      } else {
+        toast.error(result.error || "Save failed");
       }
-    } catch (err) {
-      console.error("Save failed", err);
-      toast.error("Network error occurred");
+    } catch (parseErr) {
+      console.error("Invalid JSON from server:", text);
+      // Use our local orderData with our branch selection
+      console.log("Using local orderData with our branch selection:", orderData);
+      setSavedOrderData(orderData);
+      setCurrentStep(4);
+      toast.warning("Saved locally but server returned invalid JSON");
     }
-  };
+  } catch (err) {
+    console.error("Save failed", err);
+    toast.error("Network error occurred");
+  }
+};
 
   // Add these helper functions
   const calculateTotalOriginalPrice = (services) => {
