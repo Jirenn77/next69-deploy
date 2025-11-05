@@ -21,7 +21,7 @@ import {
   ChevronsRight,
   ChevronDown,
   Leaf,
-  Plus,
+  Archive,
   Search,
   X,
   Edit,

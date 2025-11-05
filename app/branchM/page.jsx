@@ -18,7 +18,7 @@ import {
   X,
   Edit,
   Eye,
-  Trash2,
+  Archive,
   ChevronLeft,
   ChevronsLeft,
   ChevronRight,
