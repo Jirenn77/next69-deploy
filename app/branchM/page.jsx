@@ -57,7 +57,9 @@ export default function BranchManagementPage() {
   const fetchBranches = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch("https://api.lizlyskincare.sbs/branches.php");
+      const response = await fetch(
+        "https://api.lizlyskincare.sbs/branches.php"
+      );
       if (!response.ok) throw new Error("Failed to fetch branches");
       const data = await response.json();
       setBranches(data);
@@ -84,7 +86,9 @@ export default function BranchManagementPage() {
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const response = await fetch("https://api.lizlyskincare.sbs/users.php?action=users");
+        const response = await fetch(
+          "https://api.lizlyskincare.sbs/users.php?action=users"
+        );
         const data = await response.json();
         setUsers(data);
       } catch (error) {
@@ -101,41 +105,42 @@ export default function BranchManagementPage() {
   };
 
   const handleSaveEdit = async (updatedBranch) => {
-  try {
-    // sanitize user_id before sending
-    const payload = {
-      ...updatedBranch,
-      user_id:
-        updatedBranch.user_id === "Not assigned" || updatedBranch.user_id === "" 
-          ? null 
-          : updatedBranch.user_id,
-    };
+    try {
+      // sanitize user_id before sending
+      const payload = {
+        ...updatedBranch,
+        user_id:
+          updatedBranch.user_id === "Not assigned" ||
+          updatedBranch.user_id === ""
+            ? null
+            : updatedBranch.user_id,
+      };
 
-    const res = await fetch(
-      `https://api.lizlyskincare.sbs/branches.php?action=update&id=${updatedBranch.id}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      }
-    );
-
-    const result = await res.json();
-    if (result.success) {
-      const updatedList = branches.map((b) =>
-        b.id === updatedBranch.id ? payload : b
+      const res = await fetch(
+        `https://api.lizlyskincare.sbs/branches.php?action=update&id=${updatedBranch.id}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        }
       );
-      setBranches(updatedList);
-      toast.success("Branch updated successfully");
-      setIsEditModalOpen(false);
-    } else {
-      toast.error(result.error || "Failed to update");
+
+      const result = await res.json();
+      if (result.success) {
+        const updatedList = branches.map((b) =>
+          b.id === updatedBranch.id ? payload : b
+        );
+        setBranches(updatedList);
+        toast.success("Branch updated successfully");
+        setIsEditModalOpen(false);
+      } else {
+        toast.error(result.error || "Failed to update");
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("An error occurred");
     }
-  } catch (err) {
-    console.error(err);
-    toast.error("An error occurred");
-  }
-};
+  };
 
   const handleAddBranch = async () => {
     try {
@@ -144,16 +149,19 @@ export default function BranchManagementPage() {
         return;
       }
 
-      const response = await fetch("https://api.lizlyskincare.sbs/branches.php?action=add", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: newBranch.name,
-          address: newBranch.address,
-          contactNumber: newBranch.contactNumber || null,
-          colorCode: "#3B82F6", // default if not provided
-        }),
-      });
+      const response = await fetch(
+        "https://api.lizlyskincare.sbs/branches.php?action=add",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: newBranch.name,
+            address: newBranch.address,
+            contactNumber: newBranch.contactNumber || null,
+            colorCode: "#3B82F6", // default if not provided
+          }),
+        }
+      );
 
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || "Failed to add branch");
@@ -170,13 +178,11 @@ export default function BranchManagementPage() {
       });
 
       toast.success("Branch added successfully");
-
     } catch (error) {
       console.error("Error adding branch:", error);
       toast.error(error.message || "Failed to add branch");
     }
   };
-
 
   const filteredBranches = branches.filter((branch) => {
     if (!searchQuery) return true;
@@ -284,7 +290,6 @@ export default function BranchManagementPage() {
               </div>
             </Link>
 
-
             <Link href="/roles" passHref>
               <div
                 className={`w-full p-3 rounded-lg text-left flex items-center cursor-pointer transition-all ${router.pathname === "/roles" ? "bg-emerald-600 shadow-md" : "hover:bg-emerald-600/70"}`}
@@ -356,6 +361,26 @@ export default function BranchManagementPage() {
                 </div>
                 <span>Branch Management</span>
                 {router.pathname === "/branchM" && (
+                  <motion.div
+                    className="ml-auto w-2 h-2 bg-white rounded-full"
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                  />
+                )}
+              </div>
+            </Link>
+
+            <Link href="/archivees" passHref>
+              <div
+                className={`w-full p-3 rounded-lg text-left flex items-center cursor-pointer transition-all ${pathname === "/archivees" ? "bg-emerald-600 shadow-md" : "hover:bg-emerald-600/70"}`}
+              >
+                <div
+                  className={`p-1.5 mr-3 rounded-lg ${pathname === "/archivees" ? "bg-white text-emerald-700" : "bg-emerald-900/30 text-white"}`}
+                >
+                  <Archive size={18} />
+                </div>
+                <span>Archives</span>
+                {pathname === "/archivees" && (
                   <motion.div
                     className="ml-auto w-2 h-2 bg-white rounded-full"
                     initial={{ scale: 0 }}
@@ -477,10 +502,11 @@ export default function BranchManagementPage() {
                         currentBranches.map((branch) => (
                           <motion.tr
                             key={branch.id}
-                            className={`hover:bg-gray-50 cursor-pointer ${selectedBranch?.id === branch.id
-                              ? "bg-emerald-50"
-                              : ""
-                              }`}
+                            className={`hover:bg-gray-50 cursor-pointer ${
+                              selectedBranch?.id === branch.id
+                                ? "bg-emerald-50"
+                                : ""
+                            }`}
                             onClick={() => fetchBranchDetails(branch.id)}
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}

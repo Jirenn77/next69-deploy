@@ -378,6 +378,25 @@ export default function EmployeeManagement() {
                 )}
               </div>
             </Link>
+            <Link href="/archivees" passHref>
+                          <div
+                            className={`w-full p-3 rounded-lg text-left flex items-center cursor-pointer transition-all ${pathname === "/archivees" ? "bg-emerald-600 shadow-md" : "hover:bg-emerald-600/70"}`}
+                          >
+                            <div
+                              className={`p-1.5 mr-3 rounded-lg ${pathname === "/archivees" ? "bg-white text-emerald-700" : "bg-emerald-900/30 text-white"}`}
+                            >
+                              <Archive size={18} />
+                            </div>
+                            <span>Archives</span>
+                            {pathname === "/archivees" && (
+                              <motion.div
+                                className="ml-auto w-2 h-2 bg-white rounded-full"
+                                initial={{ scale: 0 }}
+                                animate={{ scale: 1 }}
+                              />
+                            )}
+                          </div>
+                        </Link>
           </div>
 
           {/* Enhanced Sidebar Footer */}
