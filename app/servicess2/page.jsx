@@ -551,15 +551,6 @@ export default function ServiceGroupsPage() {
               </td>
               <td className="px-6 py-4 text-sm text-gray-500">
                 <div className="flex space-x-3">
-                  <motion.button
-                    onClick={() => handleEditService(service)}
-                    className="text-blue-600 hover:text-blue-800 p-1.5 rounded-md hover:bg-blue-100 transition-colors"
-                    whileHover={{ scale: 1.2 }}
-                    whileTap={{ scale: 0.9 }}
-                    title="Edit"
-                  >
-                    <Edit size={16} />
-                  </motion.button>
                 </div>
               </td>
             </motion.tr>
@@ -706,18 +697,6 @@ export default function ServiceGroupsPage() {
               <td className="px-6 py-4 text-sm text-gray-500">
                 <div className="flex space-x-3">
                   {/* Edit Button */}
-                  <motion.button
-                    onClick={(e) => {
-                      e.stopPropagation(); // 🚀 prevents triggering the row click
-                      handleEditGroup(group); // only open edit modal
-                    }}
-                    className="text-blue-600 hover:text-blue-800 p-1.5 rounded-md hover:bg-blue-100 transition-colors"
-                    whileHover={{ scale: 1.2 }}
-                    whileTap={{ scale: 0.9 }}
-                    title="Edit"
-                  >
-                    <Edit size={16} />
-                  </motion.button>
 
                   {/* View Details Button */}
                   <motion.button
@@ -841,38 +820,7 @@ export default function ServiceGroupsPage() {
               onChange={(e) => setFilters({ ...filters, searchQuery: e.target.value })}
               className="pl-10 pr-4 py-2 rounded-lg bg-white/90 text-gray-800 w-full focus:outline-none focus:ring-2 focus:ring-emerald-500"
             />
-          </div>
-
-          {/* Sort By - Styled to match */}
-          <div className="flex items-center space-x-2">
-            <div className="relative">
-              <select
-                value={filters.sortBy}
-                onChange={(e) => setFilters({ ...filters, sortBy: e.target.value })}
-                className="appearance-none pl-3 pr-1 py-1 rounded-l-lg bg-white/90 text-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-1"
-              >
-                <option value="name">Name</option>
-                {activeTab === "service-groups" && (
-                  <option value="servicesCount">Services Count</option>
-                )}
-                <option value="dateCreated">Date Created</option>
-              </select>
-              <ChevronDown
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none"
-                size={16}
-              />
-            </div>
-            <button
-              onClick={() => setFilters({ ...filters, sortOrder: filters.sortOrder === "asc" ? "desc" : "asc" })}
-              className="px-3 py-2 rounded-r-lg bg-white/90 text-gray-800 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-            >
-              {filters.sortOrder === "asc" ? (
-                <ArrowUp className="h-4 w-4 text-gray-700" />
-              ) : (
-                <ArrowDown className="h-4 w-4 text-gray-700" />
-              )}
-            </button>
-          </div>
+          </div>         
         </div>
 
         <div className="flex items-center space-x-4 relative">
@@ -1392,14 +1340,6 @@ export default function ServiceGroupsPage() {
                                       {service.duration} mins
                                     </td>
                                     <td className="px-4 py-3 text-sm text-gray-500 text-right">
-                                      <motion.button
-                                        className="text-blue-600 hover:text-blue-800 p-1 rounded-md hover:bg-blue-100 transition-colors"
-                                        whileHover={{ scale: 1.2 }}
-                                        whileTap={{ scale: 0.9 }}
-                                        onClick={() => handleEditService(service)}
-                                      >
-                                        <Edit2 size={16} />
-                                      </motion.button>
                                     </td>
                                   </motion.tr>
                                 ))
