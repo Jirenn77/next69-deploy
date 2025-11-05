@@ -45,8 +45,7 @@ export default function Dashboard() {
   const [branches, setBranches] = useState([]); // Store branches separately
 
   const todayStr = new Date().toISOString().slice(0, 10);
-  const API_BASE =
-    process.env.NEXT_PUBLIC_API_BASE_URL || "https://api.lizlyskincare.sbs";
+  const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "https://api.lizlyskincare.sbs";
 
   // Authentication check
   useEffect(() => {
@@ -60,7 +59,7 @@ export default function Dashboard() {
       try {
         const user = JSON.parse(userData);
         // If user is not admin, redirect to their respective dashboard
-        if (user.role === "receptionist") {
+        if (user.role === 'receptionist') {
           router.replace("/home2");
         }
       } catch (error) {
@@ -78,12 +77,9 @@ export default function Dashboard() {
     revenueDistribution: [],
     loading: true,
   });
-
+  
   const [previousPeriodData, setPreviousPeriodData] = useState(null);
-  const [trendingData, setTrendingData] = useState({
-    percentage: 0,
-    direction: "up",
-  });
+  const [trendingData, setTrendingData] = useState({ percentage: 0, direction: 'up' });
 
   const [branchData, setBranchData] = useState({
     topServices: [],
@@ -94,9 +90,7 @@ export default function Dashboard() {
   // Fetch branches separately
   const fetchBranches = async () => {
     try {
-      const response = await fetch(
-        "https://api.lizlyskincare.sbs/branches.php"
-      );
+      const response = await fetch("https://api.lizlyskincare.sbs/branches.php");
       if (!response.ok) throw new Error("Failed to fetch branches");
       const data = await response.json();
       setBranches(data);
@@ -112,97 +106,137 @@ export default function Dashboard() {
 
   // Function to calculate trending based on previous period
   const calculateTrending = async (currentRevenue) => {
-  try {
-    // Calculate previous period dates
-    const today = new Date();
-    let startDate, endDate;
+    try {
+      // Calculate previous period dates
+      const today = new Date();
+      let startDate, endDate;
 
-    if (period === "day") {
-      // Previous day
-      startDate = new Date(today);
-      startDate.setDate(today.getDate() - 1);
-      endDate = new Date(startDate);
-    } else if (period === "week") {
-      // Previous week
-      const day = today.getDay();
-      const diff = today.getDate() - day + (day === 0 ? -6 : 1);
-      const startOfThisWeek = new Date(today.getFullYear(), today.getMonth(), diff);
-      const startOfLastWeek = new Date(startOfThisWeek);
-      startOfLastWeek.setDate(startOfThisWeek.getDate() - 7);
-      const endOfLastWeek = new Date(startOfLastWeek);
-      endOfLastWeek.setDate(startOfLastWeek.getDate() + 6);
-      
-      startDate = startOfLastWeek;
-      endDate = endOfLastWeek;
-    } else if (period === "month") {
-      // Previous month
-      startDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-      endDate = new Date(today.getFullYear(), today.getMonth(), 0);
-    } else if (period === "year") {
-      // Previous year
-      startDate = new Date(today.getFullYear() - 1, 0, 1);
-      endDate = new Date(today.getFullYear() - 1, 11, 31);
-    } else {
-      // For custom period, calculate based on the range difference
-      const range = dateRange.end - dateRange.start;
-      endDate = new Date(dateRange.start.getTime() - 1);
-      startDate = new Date(endDate.getTime() - range);
-    }
+      if (period === "day") {
+        // Previous day
+        startDate = new Date(today);
+        startDate.setDate(today.getDate() - 1);
+        endDate = new Date(startDate);
+      } else if (period === "week") {
+        // Previous week
+        const day = today.getDay();
+        const diff = today.getDate() - day + (day === 0 ? -6 : 1);
+        const startOfThisWeek = new Date(today.getFullYear(), today.getMonth(), diff - 7);
+        endDate = new Date(startOfThisWeek);
+        endDate.setDate(startOfThisWeek.getDate() + 6);
+        startDate = new Date(startOfThisWeek);
+      } else if (period === "month") {
+        // Previous month
+        startDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+        endDate = new Date(today.getFullYear(), today.getMonth(), 0);
+      } else if (period === "year") {
+        // Previous year
+        startDate = new Date(today.getFullYear() - 1, 0, 1);
+        endDate = new Date(today.getFullYear() - 1, 11, 31);
+      } else {
+        // For custom period, calculate based on the range difference
+        const range = dateRange.end - dateRange.start;
+        endDate = new Date(dateRange.start.getTime() - 1);
+        startDate = new Date(endDate.getTime() - range);
+      }
 
-    console.log("Previous period dates:", { startDate, endDate, period });
-
-    const params = new URLSearchParams({
-      action: "dashboard",
-      period: period === "custom" ? "custom" : period,
-    });
-
-    if (period === "custom" || period === "day") {
-      params.append("start_date", startDate.toISOString().slice(0, 10));
-      params.append("end_date", endDate.toISOString().slice(0, 10));
-    }
-
-    const response = await fetch(
-      `https://api.lizlyskincare.sbs/home.php?${params.toString()}`
-    );
-    
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    
-    const data = await response.json();
-    console.log("Previous period data:", data);
-
-    // Calculate previous revenue from revenue_distribution
-    const previousRevenue = Array.isArray(data.revenue_distribution) 
-      ? data.revenue_distribution.reduce((sum, branch) => sum + (branch.revenue || 0), 0)
-      : 0;
-
-    console.log("Revenue comparison:", { currentRevenue, previousRevenue });
-
-    if (previousRevenue > 0 && currentRevenue > 0) {
-      const percentage = ((currentRevenue - previousRevenue) / previousRevenue) * 100;
-      console.log("Trending calculation:", { percentage, direction: percentage >= 0 ? "up" : "down" });
-      
-      setTrendingData({
-        percentage: Math.abs(percentage),
-        direction: percentage >= 0 ? "up" : "down",
+      const params = new URLSearchParams({
+        action: "dashboard",
+        period: period === "custom" ? "custom" : period,
       });
-    } else {
-      console.log("Insufficient data for trending calculation");
-      setTrendingData({ percentage: 0, direction: "up" });
+
+      if (period === "custom" || period === "day") {
+        params.append("start_date", startDate.toISOString().slice(0, 10));
+        params.append("end_date", endDate.toISOString().slice(0, 10));
+      }
+
+      const response = await fetch(
+        `https://api.lizlyskincare.sbs/home.php?${params.toString()}`
+      );
+      const data = await response.json();
+      
+      const previousRevenue = data.revenue_distribution?.reduce(
+        (sum, branch) => sum + (branch.revenue || 0),
+        0
+      ) || 0;
+
+      if (previousRevenue > 0) {
+        const percentage = ((currentRevenue - previousRevenue) / previousRevenue) * 100;
+        setTrendingData({
+          percentage: Math.abs(percentage),
+          direction: percentage >= 0 ? 'up' : 'down'
+        });
+      } else {
+        setTrendingData({ percentage: 0, direction: 'up' });
+      }
+    } catch (error) {
+      console.error("Error calculating trending:", error);
+      setTrendingData({ percentage: 0, direction: 'up' });
     }
-  } catch (error) {
-    console.error("Error calculating trending:", error);
-    setTrendingData({ percentage: 0, direction: "up" });
-  }
-};
+  };
 
   useEffect(() => {
-  const fetchDashboardData = async () => {
-    setDashboardData((prev) => ({ ...prev, loading: true }));
+    const fetchDashboardData = async () => {
+      setDashboardData((prev) => ({ ...prev, loading: true }));
+
+      const params = new URLSearchParams({
+        action: "dashboard",
+        period: period,
+      });
+
+      // Only append dates if period is custom and both dates are valid
+      if (
+        period === "custom" &&
+        dateRange.start instanceof Date &&
+        !isNaN(dateRange.start) &&
+        dateRange.end instanceof Date &&
+        !isNaN(dateRange.end)
+      ) {
+        params.append("start_date", dateRange.start.toISOString().slice(0, 10));
+        params.append("end_date", dateRange.end.toISOString().slice(0, 10));
+      }
+
+      try {
+        const response = await fetch(
+          `https://api.lizlyskincare.sbs/home.php?${params.toString()}`
+        );
+        const data = await response.json();
+        setDashboardData({
+          topServices: data.top_services || [],
+          revenueByService: data.revenue_by_service || [],
+          revenueDistribution: data.revenue_distribution || [],
+          loading: false,
+        });
+        
+        // Calculate trending after data is loaded
+        const currentRevenue = data.revenue_distribution?.reduce(
+          (sum, branch) => sum + (branch.revenue || 0),
+          0
+        ) || 0;
+        
+        if (currentRevenue > 0 && !selectedBranch) {
+          calculateTrending(currentRevenue);
+        }
+      } catch (error) {
+        console.error("Error:", error);
+        setDashboardData((prev) => ({ ...prev, loading: false }));
+      }
+    };
+
+    // Don't fetch if custom period but start or end date is missing
+    if (period === "custom") {
+      if (!dateRange.start || !dateRange.end) return;
+    }
+
+    fetchDashboardData();
+  }, [period, dateRange]);
+
+  // Function to fetch branch-specific data
+  const fetchBranchData = async (branchId) => {
+    setBranchData({ loading: true });
 
     const params = new URLSearchParams({
-      action: "dashboard",
+      action: "branch_dashboard",
+      branch_id: branchId,
       period: period,
     });
 
@@ -221,105 +255,21 @@ export default function Dashboard() {
       const response = await fetch(
         `https://api.lizlyskincare.sbs/home.php?${params.toString()}`
       );
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
       const data = await response.json();
-      console.log("Dashboard data:", data);
-      
-      setDashboardData({
+      setBranchData({
         topServices: data.top_services || [],
         revenueByService: data.revenue_by_service || [],
-        revenueDistribution: data.revenue_distribution || [],
         loading: false,
       });
-
-      // Calculate trending after data is loaded
-      const currentRevenue = Array.isArray(data.revenue_distribution)
-        ? data.revenue_distribution.reduce((sum, branch) => sum + (branch.revenue || 0), 0)
-        : 0;
-
-      console.log("Current revenue for trending:", currentRevenue);
-
-      // Always calculate trending when we have current revenue data
-      if (currentRevenue > 0) {
-        calculateTrending(currentRevenue);
-      } else {
-        setTrendingData({ percentage: 0, direction: "up" });
-      }
     } catch (error) {
-      console.error("Error:", error);
-      setDashboardData((prev) => ({ ...prev, loading: false }));
+      console.error("Error fetching branch data:", error);
+      setBranchData({
+        topServices: [],
+        revenueByService: [],
+        loading: false,
+      });
     }
   };
-
-  // Don't fetch if custom period but start or end date is missing
-  if (period === "custom") {
-    if (!dateRange.start || !dateRange.end) return;
-  }
-
-  fetchDashboardData();
-}, [period, dateRange]);
-
-  // Function to fetch branch-specific data
-  // Function to fetch branch-specific data
-const fetchBranchData = async (branchId) => {
-  setBranchData({ loading: true });
-
-  const params = new URLSearchParams({
-    action: "branch_dashboard",
-    branch_id: branchId,
-    period: period,
-  });
-
-  if (
-    period === "custom" &&
-    dateRange.start instanceof Date &&
-    !isNaN(dateRange.start) &&
-    dateRange.end instanceof Date &&
-    !isNaN(dateRange.end)
-  ) {
-    params.append("start_date", dateRange.start.toISOString().slice(0, 10));
-    params.append("end_date", dateRange.end.toISOString().slice(0, 10));
-  }
-
-  try {
-    const response = await fetch(
-      `https://api.lizlyskincare.sbs/home.php?${params.toString()}`
-    );
-    
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    
-    const data = await response.json();
-    console.log("Branch data:", data);
-    
-    setBranchData({
-      topServices: data.top_services || [],
-      revenueByService: data.revenue_by_service || [],
-      loading: false,
-    });
-
-    // Calculate branch revenue for trending
-    const branchRevenue = Array.isArray(data.revenue_by_service)
-      ? data.revenue_by_service.reduce((sum, service) => sum + (service.revenue || 0), 0)
-      : 0;
-
-    if (branchRevenue > 0) {
-      calculateTrending(branchRevenue);
-    }
-  } catch (error) {
-    console.error("Error fetching branch data:", error);
-    setBranchData({
-      topServices: [],
-      revenueByService: [],
-      loading: false,
-    });
-  }
-};
 
   const handlePeriodChange = (newPeriod) => {
     setPeriod(newPeriod);
@@ -360,12 +310,12 @@ const fetchBranchData = async (branchId) => {
       await Promise.allSettled([
         fetch(`${API_BASE}/admin.php?action=logout`, {
           method: "POST",
-          credentials: "include",
+          credentials: "include"
         }),
         fetch(`${API_BASE}/users.php?action=logout`, {
-          method: "POST",
-          credentials: "include",
-        }),
+          method: "POST", 
+          credentials: "include"
+        })
       ]);
     } catch (error) {
       console.error("Logout API error:", error);
@@ -379,16 +329,14 @@ const fetchBranchData = async (branchId) => {
       localStorage.removeItem("branch_name");
       localStorage.removeItem("loginAttempts");
       localStorage.removeItem("authToken");
-
+      
       // Clear session storage
       sessionStorage.clear();
-
+      
       // Clear authentication cookies
-      document.cookie =
-        "auth-token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
-      document.cookie =
-        "isAuthenticated=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
-
+      document.cookie = 'auth-token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+      document.cookie = 'isAuthenticated=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+      
       // Redirect to login page
       window.location.replace("/");
     }
@@ -749,8 +697,7 @@ const fetchBranchData = async (branchId) => {
                     <p className="text-xs text-emerald-300">Administrator</p>
                   </div>
                 </div>
-                <button
-                  className="text-emerald-300 hover:text-white transition-colors"
+                <button className="text-emerald-300 hover:text-white transition-colors"
                   onClick={handleLogout}
                 >
                   <LogOut size={18} />
@@ -898,25 +845,8 @@ const fetchBranchData = async (branchId) => {
                   </h3>
                 </div>
                 <div className="p-3 bg-emerald-100 rounded-full">
-                  <span className="text-emerald-600 text-2xl font-bold">₱</span>
-                </div>
-              </div>
-              <div className="flex items-center mt-4">
-                {trendingData.direction === "up" ? (
-                  <TrendingUp className="text-emerald-500 mr-1" size={16} />
-                ) : (
-                  <TrendingUp
-                    className="text-red-500 mr-1 rotate-180"
-                    size={16}
-                  />
-                )}
-                <span
-                  className={`text-sm ${trendingData.direction === "up" ? "text-emerald-600" : "text-red-600"}`}
-                >
-                  {trendingData.direction === "up" ? "+" : "-"}
-                  {trendingData.percentage.toFixed(1)}% from last{" "}
-                  {period.charAt(0).toUpperCase() + period.slice(1)}
-                </span>
+  <span className="text-emerald-600 text-2xl font-bold">₱</span>
+</div>
               </div>
             </motion.div>
 

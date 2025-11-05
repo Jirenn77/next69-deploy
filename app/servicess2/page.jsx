@@ -511,9 +511,6 @@ export default function ServiceGroupsPage() {
             <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
               Duration
             </th>
-            <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-              Actions
-            </th>
           </tr>
         </thead>
         <tbody className="bg-white divide-y divide-gray-200">
@@ -548,10 +545,6 @@ export default function ServiceGroupsPage() {
               </td>
               <td className="px-6 py-4 text-sm text-gray-600">
                 {service.duration ?? service.service_duration ?? "-"} mins
-              </td>
-              <td className="px-6 py-4 text-sm text-gray-500">
-                <div className="flex space-x-3">
-                </div>
               </td>
             </motion.tr>
           ))}
