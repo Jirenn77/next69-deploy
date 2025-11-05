@@ -31,7 +31,6 @@ import {
   ChevronDown,
   EyeOff,
   ArrowUpDown,
-  Archive,
 } from "lucide-react";
 
 export default function UserManagement() {
@@ -53,11 +52,11 @@ export default function UserManagement() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [showEditPassword, setShowEditPassword] = useState(false);
   const [showEditConfirmPassword, setShowEditConfirmPassword] = useState(false);
-  
+
   // Sorting state
   const [sortConfig, setSortConfig] = useState({
     key: "name",
-    direction: "asc"
+    direction: "asc",
   });
 
   const [newUser, setNewUser] = useState({
@@ -91,7 +90,9 @@ export default function UserManagement() {
 
   const fetchUserDetails = async (userId) => {
     try {
-      const res = await fetch(`https://api.lizlyskincare.sbs/users.php?action=get&id=${userId}`);
+      const res = await fetch(
+        `https://api.lizlyskincare.sbs/users.php?action=get&id=${userId}`
+      );
       const data = await res.json();
       setSelectedUser(data);
     } catch (error) {
@@ -102,7 +103,9 @@ export default function UserManagement() {
   useEffect(() => {
     const fetchBranches = async () => {
       try {
-        const res = await fetch("https://api.lizlyskincare.sbs/users.php?action=branches");
+        const res = await fetch(
+          "https://api.lizlyskincare.sbs/users.php?action=branches"
+        );
         const data = await res.json();
         if (data.success) {
           setBranches(data.branches);
@@ -129,12 +132,14 @@ export default function UserManagement() {
     if (sortConfig.key) {
       sortableUsers.sort((a, b) => {
         // Handle branch sorting differently since it might be branchName or branch
-        const aValue = sortConfig.key === "branch" 
-          ? (a.branchName || a.branch || "").toLowerCase()
-          : a[sortConfig.key]?.toLowerCase() || "";
-        const bValue = sortConfig.key === "branch"
-          ? (b.branchName || b.branch || "").toLowerCase()
-          : b[sortConfig.key]?.toLowerCase() || "";
+        const aValue =
+          sortConfig.key === "branch"
+            ? (a.branchName || a.branch || "").toLowerCase()
+            : a[sortConfig.key]?.toLowerCase() || "";
+        const bValue =
+          sortConfig.key === "branch"
+            ? (b.branchName || b.branch || "").toLowerCase()
+            : b[sortConfig.key]?.toLowerCase() || "";
 
         if (aValue < bValue) {
           return sortConfig.direction === "asc" ? -1 : 1;
@@ -177,7 +182,10 @@ export default function UserManagement() {
   };
 
   const handleSaveEdit = async (updatedUser) => {
-    if (updatedUser.password && updatedUser.password !== updatedUser.confirmPassword) {
+    if (
+      updatedUser.password &&
+      updatedUser.password !== updatedUser.confirmPassword
+    ) {
       toast.error("Passwords do not match");
       return;
     }
@@ -189,7 +197,7 @@ export default function UserManagement() {
       email: updatedUser.email,
       branch_id: updatedUser.branch_id || null,
       status: updatedUser.status,
-      role: updatedUser.role || 'receptionist'
+      role: updatedUser.role || "receptionist",
     };
 
     // Only include password if it's provided
@@ -208,7 +216,7 @@ export default function UserManagement() {
       );
 
       const result = await res.json();
-      
+
       if (res.ok && result.success) {
         // Use the updated user data from the server response
         const updatedList = users.map((u) =>
@@ -217,7 +225,7 @@ export default function UserManagement() {
         setUsers(updatedList);
         toast.success(result.message || "User updated successfully");
         setIsEditModalOpen(false);
-        
+
         // Refresh the user details if this user is selected
         if (selectedUser && selectedUser.id === updatedUser.id) {
           fetchUserDetails(updatedUser.id);
@@ -232,79 +240,87 @@ export default function UserManagement() {
   };
 
   const handleAddUser = async () => {
-  try {
-    // Enhanced validation for all required fields
-    if (!newUser.name || !newUser.username || !newUser.email || !newUser.password || !newUser.branch_id) {
-      toast.error("All fields are required: Name, Username, Email, Password, and Branch");
-      return;
+    try {
+      // Enhanced validation for all required fields
+      if (
+        !newUser.name ||
+        !newUser.username ||
+        !newUser.email ||
+        !newUser.password ||
+        !newUser.branch_id
+      ) {
+        toast.error(
+          "All fields are required: Name, Username, Email, Password, and Branch"
+        );
+        return;
+      }
+
+      // Check if passwords match
+      if (newUser.password !== newUser.confirmPassword) {
+        toast.error("Passwords do not match");
+        return;
+      }
+
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(newUser.email)) {
+        toast.error("Please enter a valid email address");
+        return;
+      }
+
+      // Validate password strength
+      if (newUser.password.length < 6) {
+        toast.error("Password should be at least 6 characters long");
+        return;
+      }
+
+      // Convert branch_id to integer or null
+      const branchId = newUser.branch_id ? parseInt(newUser.branch_id) : null;
+
+      const response = await fetch("https://api.lizlyskincare.sbs/users.php", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "add",
+          name: newUser.name,
+          username: newUser.username,
+          email: newUser.email,
+          branch_id: branchId, // Use the converted value
+          password: newUser.password,
+          status: newUser.status,
+          role: "receptionist",
+        }),
+      });
+
+      const result = await response.json();
+      if (!response.ok || !result.success) {
+        throw new Error(result.message || "Failed to add user");
+      }
+
+      setUsers([...users, result.user]);
+      setIsModalOpen(false);
+
+      // Reset form completely
+      setNewUser({
+        name: "",
+        username: "",
+        email: "",
+        password: "",
+        confirmPassword: "",
+        branch_id: "",
+        status: "Active",
+      });
+
+      // Reset password visibility
+      setShowPassword(false);
+      setShowConfirmPassword(false);
+
+      toast.success(result.message || "User added successfully");
+    } catch (error) {
+      console.error("Error adding user:", error);
+      toast.error(error.message || "Failed to add user");
     }
-
-    // Check if passwords match
-    if (newUser.password !== newUser.confirmPassword) {
-      toast.error("Passwords do not match");
-      return;
-    }
-
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(newUser.email)) {
-      toast.error("Please enter a valid email address");
-      return;
-    }
-
-    // Validate password strength
-    if (newUser.password.length < 6) {
-      toast.error("Password should be at least 6 characters long");
-      return;
-    }
-
-    // Convert branch_id to integer or null
-    const branchId = newUser.branch_id ? parseInt(newUser.branch_id) : null;
-
-    const response = await fetch("https://api.lizlyskincare.sbs/users.php", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        action: "add",
-        name: newUser.name,
-        username: newUser.username,
-        email: newUser.email,
-        branch_id: branchId, // Use the converted value
-        password: newUser.password,
-        status: newUser.status,
-        role: "receptionist"
-      }),
-    });
-
-    const result = await response.json();
-    if (!response.ok || !result.success) {
-      throw new Error(result.message || "Failed to add user");
-    }
-
-    setUsers([...users, result.user]);
-    setIsModalOpen(false);
-    
-    // Reset form completely
-    setNewUser({
-      name: "",
-      username: "",
-      email: "",
-      password: "",
-      confirmPassword: "",
-      branch_id: "",
-      status: "Active",
-    });
-
-    // Reset password visibility
-    setShowPassword(false);
-    setShowConfirmPassword(false);
-
-    toast.success(result.message || "User added successfully");
-  } catch (error) {
-    console.error("Error adding user:", error);
-    toast.error(error.message || "Failed to add user");
-  }
-};
+  };
 
   const handlePageChange = (pageNumber) => {
     setCurrentPage(pageNumber);
@@ -322,8 +338,8 @@ export default function UserManagement() {
       return <ArrowUpDown size={14} className="text-gray-400" />;
     }
     return (
-      <ChevronDown 
-        size={14} 
+      <ChevronDown
+        size={14}
         className={`transition-transform ${
           sortConfig.direction === "desc" ? "rotate-180" : ""
         }`}
@@ -339,34 +355,34 @@ export default function UserManagement() {
         <div className="flex items-center space-x-4">
           {/* Space for potential left-aligned elements */}
         </div>
-  
-    <div className="flex items-center space-x-4 flex-grow justify-center">
-  <div className="relative">
-    <Search
-      className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-      size={18}
-    />
-    <input
-      type="text"
-      placeholder="Search users by name, username, or branch..."
-      value={searchQuery}
-      onChange={(e) => {
-        setSearchQuery(e.target.value);
-        setCurrentPage(1);
-      }}
-      className="pl-10 pr-10 py-2 rounded-lg bg-white border border-gray-300 text-gray-800 w-80 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-      onKeyPress={(e) => e.key === "Enter" && setCurrentPage(1)}
-    />
-    {searchQuery && (
-      <button
-        onClick={() => setSearchQuery("")}
-        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
-      >
-        <X size={18} />
-      </button>
-    )}
-  </div>
-</div>
+
+        <div className="flex items-center space-x-4 flex-grow justify-center">
+          <div className="relative">
+            <Search
+              className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+              size={18}
+            />
+            <input
+              type="text"
+              placeholder="Search users by name, username, or branch..."
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="pl-10 pr-10 py-2 rounded-lg bg-white border border-gray-300 text-gray-800 w-80 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+              onKeyPress={(e) => e.key === "Enter" && setCurrentPage(1)}
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery("")}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X size={18} />
+              </button>
+            )}
+          </div>
+        </div>
 
         <div className="flex items-center space-x-4 relative">
           <div
@@ -419,15 +435,15 @@ export default function UserManagement() {
           <div className="w-full px-4 space-y-1 overflow-y-auto flex-grow custom-scrollbar">
             <Link href="/home" passHref>
               <div
-                className={`w-full p-3 rounded-lg text-left flex items-center cursor-pointer transition-all ${pathname === "/home" ? "bg-emerald-600 shadow-md" : "hover:bg-emerald-600/70"}`}
+                className={`w-full p-3 rounded-lg text-left flex items-center cursor-pointer transition-all ${router.pathname === "/home" ? "bg-emerald-600 shadow-md" : "hover:bg-emerald-600/70"}`}
               >
                 <div
-                  className={`p-1.5 mr-3 rounded-lg ${pathname === "/home" ? "bg-white text-emerald-700" : "bg-emerald-900/30 text-white"}`}
+                  className={`p-1.5 mr-3 rounded-lg ${router.pathname === "/home" ? "bg-white text-emerald-700" : "bg-emerald-900/30 text-white"}`}
                 >
                   <Home size={18} />
                 </div>
                 <span>Dashboard</span>
-                {pathname === "/home" && (
+                {router.pathname === "/home" && (
                   <motion.div
                     className="ml-auto w-2 h-2 bg-white rounded-full"
                     initial={{ scale: 0 }}
@@ -439,15 +455,15 @@ export default function UserManagement() {
 
             <Link href="/roles" passHref>
               <div
-                className={`w-full p-3 rounded-lg text-left flex items-center cursor-pointer transition-all ${pathname === "/roles" ? "bg-emerald-600 shadow-md" : "hover:bg-emerald-600/70"}`}
+                className={`w-full p-3 rounded-lg text-left flex items-center cursor-pointer transition-all ${router.pathname === "/roles" ? "bg-emerald-600 shadow-md" : "hover:bg-emerald-600/70"}`}
               >
                 <div
-                  className={`p-1.5 mr-3 rounded-lg ${pathname === "/roles" ? "bg-white text-emerald-700" : "bg-emerald-900/30 text-white"}`}
+                  className={`p-1.5 mr-3 rounded-lg ${router.pathname === "/roles" ? "bg-white text-emerald-700" : "bg-emerald-900/30 text-white"}`}
                 >
                   <Shield size={18} />
                 </div>
                 <span>Role Settings</span>
-                {pathname === "/roles" && (
+                {router.pathname === "/roles" && (
                   <motion.div
                     className="ml-auto w-2 h-2 bg-white rounded-full"
                     initial={{ scale: 0 }}
@@ -459,15 +475,15 @@ export default function UserManagement() {
 
             <Link href="/employeeM" passHref>
               <div
-                className={`w-full p-3 rounded-lg text-left flex items-center cursor-pointer transition-all ${pathname === "/employeeM" ? "bg-emerald-600 shadow-md" : "hover:bg-emerald-600/70"}`}
+                className={`w-full p-3 rounded-lg text-left flex items-center cursor-pointer transition-all ${router.pathname === "/employeeM" ? "bg-emerald-600 shadow-md" : "hover:bg-emerald-600/70"}`}
               >
                 <div
-                  className={`p-1.5 mr-3 rounded-lg ${pathname === "/employeeM" ? "bg-white text-emerald-700" : "bg-emerald-900/30 text-white"}`}
+                  className={`p-1.5 mr-3 rounded-lg ${router.pathname === "/employeeM" ? "bg-white text-emerald-700" : "bg-emerald-900/30 text-white"}`}
                 >
                   <Users size={18} />
                 </div>
                 <span>Employee Management</span>
-                {pathname === "/employeeM" && (
+                {router.pathname === "/employeeM" && (
                   <motion.div
                     className="ml-auto w-2 h-2 bg-white rounded-full"
                     initial={{ scale: 0 }}
@@ -479,15 +495,15 @@ export default function UserManagement() {
 
             <Link href="/userManage" passHref>
               <div
-                className={`w-full p-3 rounded-lg text-left flex items-center cursor-pointer transition-all ${pathname === "/userManage" ? "bg-emerald-600 shadow-md" : "hover:bg-emerald-600/70"}`}
+                className={`w-full p-3 rounded-lg text-left flex items-center cursor-pointer transition-all ${router.pathname === "/userManage" ? "bg-emerald-600 shadow-md" : "hover:bg-emerald-600/70"}`}
               >
                 <div
-                  className={`p-1.5 mr-3 rounded-lg ${pathname === "/userManage" ? "bg-white text-emerald-700" : "bg-emerald-900/30 text-white"}`}
+                  className={`p-1.5 mr-3 rounded-lg ${router.pathname === "/userManage" ? "bg-white text-emerald-700" : "bg-emerald-900/30 text-white"}`}
                 >
                   <Users size={18} />
                 </div>
                 <span>User Management</span>
-                {pathname === "/userManage" && (
+                {router.pathname === "/userManage" && (
                   <motion.div
                     className="ml-auto w-2 h-2 bg-white rounded-full"
                     initial={{ scale: 0 }}
@@ -499,15 +515,15 @@ export default function UserManagement() {
 
             <Link href="/branchM" passHref>
               <div
-                className={`w-full p-3 rounded-lg text-left flex items-center cursor-pointer transition-all ${pathname === "/branchM" ? "bg-emerald-600 shadow-md" : "hover:bg-emerald-600/70"}`}
+                className={`w-full p-3 rounded-lg text-left flex items-center cursor-pointer transition-all ${router.pathname === "/branchM" ? "bg-emerald-600 shadow-md" : "hover:bg-emerald-600/70"}`}
               >
                 <div
-                  className={`p-1.5 mr-3 rounded-lg ${pathname === "/branchM" ? "bg-white text-emerald-700" : "bg-emerald-900/30 text-white"}`}
+                  className={`p-1.5 mr-3 rounded-lg ${router.pathname === "/branchM" ? "bg-white text-emerald-700" : "bg-emerald-900/30 text-white"}`}
                 >
                   <Home size={18} />
                 </div>
                 <span>Branch Management</span>
-                {pathname === "/branchM" && (
+                {router.pathname === "/branchM" && (
                   <motion.div
                     className="ml-auto w-2 h-2 bg-white rounded-full"
                     initial={{ scale: 0 }}
@@ -517,17 +533,18 @@ export default function UserManagement() {
               </div>
             </Link>
 
+            {/* Archive Tab */}
             <Link href="/archivees" passHref>
               <div
-                className={`w-full p-3 rounded-lg text-left flex items-center cursor-pointer transition-all ${pathname === "/archivees" ? "bg-emerald-600 shadow-md" : "hover:bg-emerald-600/70"}`}
+                className={`w-full p-3 rounded-lg text-left flex items-center cursor-pointer transition-all ${router.pathname === "/archivees" ? "bg-emerald-600 shadow-md" : "hover:bg-emerald-600/70"}`}
               >
                 <div
-                  className={`p-1.5 mr-3 rounded-lg ${pathname === "/archivees" ? "bg-white text-emerald-700" : "bg-emerald-900/30 text-white"}`}
+                  className={`p-1.5 mr-3 rounded-lg ${router.pathname === "/archivees" ? "bg-white text-emerald-700" : "bg-emerald-900/30 text-white"}`}
                 >
                   <Archive size={18} />
                 </div>
-                <span>Archives</span>
-                {pathname === "/archivees" && (
+                <span>Archive</span>
+                {router.pathname === "/archivees" && (
                   <motion.div
                     className="ml-auto w-2 h-2 bg-white rounded-full"
                     initial={{ scale: 0 }}
@@ -615,10 +632,11 @@ export default function UserManagement() {
               {["all", "active", "inactive"].map((tab) => (
                 <motion.button
                   key={tab}
-                  className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${activeTab === tab
-                    ? "bg-white text-emerald-600 shadow-sm"
-                    : "text-gray-500 hover:text-gray-700"
-                    }`}
+                  className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                    activeTab === tab
+                      ? "bg-white text-emerald-600 shadow-sm"
+                      : "text-gray-500 hover:text-gray-700"
+                  }`}
                   onClick={() => {
                     setActiveTab(tab);
                     setCurrentPage(1);
@@ -650,7 +668,7 @@ export default function UserManagement() {
                   <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-gray-50">
                       <tr>
-                        <th 
+                        <th
                           className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
                           onClick={() => handleSort("name")}
                         >
@@ -659,7 +677,7 @@ export default function UserManagement() {
                             <SortIndicator columnKey="name" />
                           </div>
                         </th>
-                        <th 
+                        <th
                           className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
                           onClick={() => handleSort("username")}
                         >
@@ -668,7 +686,7 @@ export default function UserManagement() {
                             <SortIndicator columnKey="username" />
                           </div>
                         </th>
-                        <th 
+                        <th
                           className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
                           onClick={() => handleSort("branch")}
                         >
@@ -692,7 +710,9 @@ export default function UserManagement() {
                             <div className="flex justify-center">
                               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div>
                             </div>
-                            <p className="text-gray-500 mt-2">Loading users...</p>
+                            <p className="text-gray-500 mt-2">
+                              Loading users...
+                            </p>
                           </td>
                         </tr>
                       ) : currentUsers.length === 0 ? (
@@ -704,7 +724,9 @@ export default function UserManagement() {
                             <Users className="mx-auto h-12 w-12 text-gray-300 mb-2" />
                             <p>No users found</p>
                             {searchQuery && (
-                              <p className="text-sm mt-1">Try adjusting your search</p>
+                              <p className="text-sm mt-1">
+                                Try adjusting your search
+                              </p>
                             )}
                           </td>
                         </tr>
@@ -712,10 +734,11 @@ export default function UserManagement() {
                         currentUsers.map((user) => (
                           <motion.tr
                             key={user.id}
-                            className={`hover:bg-gray-50 cursor-pointer ${selectedUser?.id === user.id
-                              ? "bg-emerald-50"
-                              : ""
-                              }`}
+                            className={`hover:bg-gray-50 cursor-pointer ${
+                              selectedUser?.id === user.id
+                                ? "bg-emerald-50"
+                                : ""
+                            }`}
                             onClick={() => fetchUserDetails(user.id)}
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
@@ -753,10 +776,11 @@ export default function UserManagement() {
                             {/* Status Column */}
                             <td className="px-6 py-4 whitespace-nowrap">
                               <span
-                                className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${user.status === "Active"
-                                  ? "bg-green-100 text-green-800 border border-green-200"
-                                  : "bg-gray-100 text-gray-800 border border-gray-200"
-                                  }`}
+                                className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                                  user.status === "Active"
+                                    ? "bg-green-100 text-green-800 border border-green-200"
+                                    : "bg-gray-100 text-gray-800 border border-gray-200"
+                                }`}
                               >
                                 {user.status}
                               </span>
@@ -825,14 +849,18 @@ export default function UserManagement() {
                         </button>
 
                         {/* Page numbers */}
-                        {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                        {Array.from(
+                          { length: totalPages },
+                          (_, i) => i + 1
+                        ).map((page) => (
                           <button
                             key={page}
                             onClick={() => handlePageChange(page)}
-                            className={`px-3 py-1 rounded-lg text-sm transition-colors ${currentPage === page
+                            className={`px-3 py-1 rounded-lg text-sm transition-colors ${
+                              currentPage === page
                                 ? "bg-emerald-600 text-white"
                                 : "hover:bg-gray-100"
-                              }`}
+                            }`}
                           >
                             {page}
                           </button>
@@ -896,7 +924,9 @@ export default function UserManagement() {
                             size={16}
                           />
                           <div>
-                            <p className="text-sm font-medium text-gray-900">Username</p>
+                            <p className="text-sm font-medium text-gray-900">
+                              Username
+                            </p>
                             <p className="text-sm text-gray-600">
                               {selectedUser.username || "N/A"}
                             </p>
@@ -908,9 +938,13 @@ export default function UserManagement() {
                             size={16}
                           />
                           <div>
-                            <p className="text-sm font-medium text-gray-900">Branch</p>
+                            <p className="text-sm font-medium text-gray-900">
+                              Branch
+                            </p>
                             <p className="text-sm text-gray-600">
-                              {selectedUser.branchName || selectedUser.branch || "N/A"}
+                              {selectedUser.branchName ||
+                                selectedUser.branch ||
+                                "N/A"}
                             </p>
                           </div>
                         </div>
@@ -923,16 +957,21 @@ export default function UserManagement() {
                         Account Status
                       </h3>
                       <div
-                        className={`p-4 rounded-lg border ${selectedUser.status === "Active"
-                          ? "bg-green-50 border-green-200"
-                          : "bg-gray-50 border-gray-200"
-                          }`}
+                        className={`p-4 rounded-lg border ${
+                          selectedUser.status === "Active"
+                            ? "bg-green-50 border-green-200"
+                            : "bg-gray-50 border-gray-200"
+                        }`}
                       >
                         <div className="flex justify-between items-center">
-                          <span className={`font-medium ${selectedUser.status === "Active" ? "text-green-800" : "text-gray-800"}`}>
+                          <span
+                            className={`font-medium ${selectedUser.status === "Active" ? "text-green-800" : "text-gray-800"}`}
+                          >
                             {selectedUser.status}
                           </span>
-                          <div className={`w-2 h-2 rounded-full ${selectedUser.status === "Active" ? "bg-green-500" : "bg-gray-400"}`}></div>
+                          <div
+                            className={`w-2 h-2 rounded-full ${selectedUser.status === "Active" ? "bg-green-500" : "bg-gray-400"}`}
+                          ></div>
                         </div>
                       </div>
                     </div>
@@ -950,7 +989,9 @@ export default function UserManagement() {
                               size={16}
                             />
                             <div>
-                              <p className="text-sm font-medium text-gray-900">Email</p>
+                              <p className="text-sm font-medium text-gray-900">
+                                Email
+                              </p>
                               <p className="text-sm text-gray-600 break-all">
                                 {selectedUser.email}
                               </p>
@@ -963,7 +1004,9 @@ export default function UserManagement() {
                                 size={16}
                               />
                               <div>
-                                <p className="text-sm font-medium text-gray-900">Phone</p>
+                                <p className="text-sm font-medium text-gray-900">
+                                  Phone
+                                </p>
                                 <p className="text-sm text-gray-600">
                                   {selectedUser.phone}
                                 </p>
@@ -1006,134 +1049,146 @@ export default function UserManagement() {
 
                 {/* Two-column form */}
                 <div className="grid grid-cols-2 gap-4">
-  <div>
-    <label className="block text-sm font-medium mb-1">
-      Name <span className="text-red-500">*</span>
-    </label>
-    <input
-      type="text"
-      name="name"
-      value={newUser.name}
-      onChange={(e) =>
-        setNewUser({ ...newUser, name: e.target.value })
-      }
-      className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-emerald-500"
-      required
-    />
-  </div>
-  <div>
-    <label className="block text-sm font-medium mb-1">
-      Username <span className="text-red-500">*</span>
-    </label>
-    <input
-      type="text"
-      name="username"
-      value={newUser.username}
-      onChange={(e) =>
-        setNewUser({ ...newUser, username: e.target.value })
-      }
-      className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-emerald-500"
-      required
-    />
-  </div>
-  <div>
-    <label className="block text-sm font-medium mb-1">
-      Email <span className="text-red-500">*</span>
-    </label>
-    <input
-      type="email"
-      name="email"
-      value={newUser.email}
-      onChange={(e) =>
-        setNewUser({ ...newUser, email: e.target.value })
-      }
-      className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-emerald-500"
-      required
-    />
-  </div>
-  <div>
-    <label className="block text-sm font-medium mb-1">
-      Branch <span className="text-red-500">*</span>
-    </label>
-    <select
-  name="branch_id"
-  value={newUser.branch_id}
-  onChange={(e) =>
-    setNewUser({ ...newUser, branch_id: e.target.value })
-  }
-  className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-emerald-500"
-  required
->
-  <option value="">Select Branch</option>
-  {branches.map((branch) => (
-    <option key={branch.id} value={branch.id}>
-      {branch.name}
-    </option>
-  ))}
-</select>
-  </div>
-  <div>
-    <label className="block text-sm font-medium mb-1">
-      Password <span className="text-red-500">*</span>
-    </label>
-    <div className="relative">
-      <Lock
-        className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-        size={16}
-      />
-      <input
-        type={showPassword ? "text" : "password"}
-        name="password"
-        value={newUser.password}
-        onChange={(e) =>
-          setNewUser({ ...newUser, password: e.target.value })
-        }
-        className="w-full pl-10 pr-10 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500"
-        required
-      />
-      <button
-        type="button"
-        onClick={() => setShowPassword(!showPassword)}
-        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-      >
-        {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-      </button>
-    </div>
-  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">
+                      Name <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      name="name"
+                      value={newUser.name}
+                      onChange={(e) =>
+                        setNewUser({ ...newUser, name: e.target.value })
+                      }
+                      className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-emerald-500"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">
+                      Username <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      name="username"
+                      value={newUser.username}
+                      onChange={(e) =>
+                        setNewUser({ ...newUser, username: e.target.value })
+                      }
+                      className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-emerald-500"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">
+                      Email <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="email"
+                      name="email"
+                      value={newUser.email}
+                      onChange={(e) =>
+                        setNewUser({ ...newUser, email: e.target.value })
+                      }
+                      className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-emerald-500"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">
+                      Branch <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      name="branch_id"
+                      value={newUser.branch_id}
+                      onChange={(e) =>
+                        setNewUser({ ...newUser, branch_id: e.target.value })
+                      }
+                      className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-emerald-500"
+                      required
+                    >
+                      <option value="">Select Branch</option>
+                      {branches.map((branch) => (
+                        <option key={branch.id} value={branch.id}>
+                          {branch.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">
+                      Password <span className="text-red-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <Lock
+                        className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                        size={16}
+                      />
+                      <input
+                        type={showPassword ? "text" : "password"}
+                        name="password"
+                        value={newUser.password}
+                        onChange={(e) =>
+                          setNewUser({ ...newUser, password: e.target.value })
+                        }
+                        className="w-full pl-10 pr-10 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500"
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                      >
+                        {showPassword ? (
+                          <EyeOff size={16} />
+                        ) : (
+                          <Eye size={16} />
+                        )}
+                      </button>
+                    </div>
+                  </div>
 
-  <div>
-    <label className="block text-sm font-medium mb-1">
-      Confirm Password <span className="text-red-500">*</span>
-    </label>
-    <div className="relative">
-      <Lock
-        className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-        size={16}
-      />
-      <input
-        type={showConfirmPassword ? "text" : "password"}
-        name="confirmPassword"
-        value={newUser.confirmPassword}
-        onChange={(e) =>
-          setNewUser({
-            ...newUser,
-            confirmPassword: e.target.value,
-          })
-        }
-        className="w-full pl-10 pr-10 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500"
-        required
-      />
-      <button
-        type="button"
-        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-      >
-        {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-      </button>
-    </div>
-  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">
+                      Confirm Password <span className="text-red-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <Lock
+                        className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                        size={16}
+                      />
+                      <input
+                        type={showConfirmPassword ? "text" : "password"}
+                        name="confirmPassword"
+                        value={newUser.confirmPassword}
+                        onChange={(e) =>
+                          setNewUser({
+                            ...newUser,
+                            confirmPassword: e.target.value,
+                          })
+                        }
+                        className="w-full pl-10 pr-10 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500"
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setShowConfirmPassword(!showConfirmPassword)
+                        }
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                      >
+                        {showConfirmPassword ? (
+                          <EyeOff size={16} />
+                        ) : (
+                          <Eye size={16} />
+                        )}
+                      </button>
+                    </div>
+                  </div>
                   <div className="col-span-2">
-                    <label className="block text-sm font-medium mb-1">Status</label>
+                    <label className="block text-sm font-medium mb-1">
+                      Status
+                    </label>
                     <select
                       name="status"
                       value={newUser.status}
@@ -1194,12 +1249,16 @@ export default function UserManagement() {
                 <div className="grid grid-cols-2 gap-4">
                   {/* Name */}
                   <div>
-                    <label className="block text-sm font-medium mb-1">Name</label>
+                    <label className="block text-sm font-medium mb-1">
+                      Name
+                    </label>
                     <input
                       type="text"
                       name="name"
                       value={editUser.name}
-                      onChange={(e) => setEditUser({ ...editUser, name: e.target.value })}
+                      onChange={(e) =>
+                        setEditUser({ ...editUser, name: e.target.value })
+                      }
                       className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-emerald-500"
                       required
                     />
@@ -1207,12 +1266,16 @@ export default function UserManagement() {
 
                   {/* Username */}
                   <div>
-                    <label className="block text-sm font-medium mb-1">Username</label>
+                    <label className="block text-sm font-medium mb-1">
+                      Username
+                    </label>
                     <input
                       type="text"
                       name="username"
                       value={editUser.username}
-                      onChange={(e) => setEditUser({ ...editUser, username: e.target.value })}
+                      onChange={(e) =>
+                        setEditUser({ ...editUser, username: e.target.value })
+                      }
                       className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-emerald-500"
                       required
                     />
@@ -1220,7 +1283,9 @@ export default function UserManagement() {
 
                   {/* Branch */}
                   <div>
-                    <label className="block text-sm font-medium mb-1">Branch</label>
+                    <label className="block text-sm font-medium mb-1">
+                      Branch
+                    </label>
                     <select
                       name="branch_id"
                       value={editUser.branch_id}
@@ -1241,11 +1306,15 @@ export default function UserManagement() {
 
                   {/* Status */}
                   <div>
-                    <label className="block text-sm font-medium mb-1">Status</label>
+                    <label className="block text-sm font-medium mb-1">
+                      Status
+                    </label>
                     <select
                       name="status"
                       value={editUser.status}
-                      onChange={(e) => setEditUser({ ...editUser, status: e.target.value })}
+                      onChange={(e) =>
+                        setEditUser({ ...editUser, status: e.target.value })
+                      }
                       className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-emerald-500"
                     >
                       <option value="Active">Active</option>
@@ -1255,7 +1324,9 @@ export default function UserManagement() {
 
                   {/* Password */}
                   <div>
-                    <label className="block text-sm font-medium mb-1">Password</label>
+                    <label className="block text-sm font-medium mb-1">
+                      Password
+                    </label>
                     <div className="relative">
                       <Lock
                         className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
@@ -1275,14 +1346,20 @@ export default function UserManagement() {
                         onClick={() => setShowEditPassword(!showEditPassword)}
                         className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400"
                       >
-                        {showEditPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                        {showEditPassword ? (
+                          <EyeOff size={16} />
+                        ) : (
+                          <Eye size={16} />
+                        )}
                       </button>
                     </div>
                   </div>
 
                   {/* Confirm Password */}
                   <div>
-                    <label className="block text-sm font-medium mb-1">Confirm Password</label>
+                    <label className="block text-sm font-medium mb-1">
+                      Confirm Password
+                    </label>
                     <div className="relative">
                       <Lock
                         className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
@@ -1307,7 +1384,11 @@ export default function UserManagement() {
                         }
                         className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400"
                       >
-                        {showEditConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                        {showEditConfirmPassword ? (
+                          <EyeOff size={16} />
+                        ) : (
+                          <Eye size={16} />
+                        )}
                       </button>
                     </div>
                   </div>
@@ -1315,7 +1396,9 @@ export default function UserManagement() {
                   {/* Email - spans full width */}
                   {editUser.email && (
                     <div className="col-span-2">
-                      <label className="block text-sm font-medium mb-1">Email</label>
+                      <label className="block text-sm font-medium mb-1">
+                        Email
+                      </label>
                       <input
                         type="email"
                         name="email"
@@ -1331,7 +1414,9 @@ export default function UserManagement() {
                   {/* Phone - spans full width */}
                   {editUser.phone && (
                     <div className="col-span-2">
-                      <label className="block text-sm font-medium mb-1">Phone</label>
+                      <label className="block text-sm font-medium mb-1">
+                        Phone
+                      </label>
                       <input
                         type="text"
                         name="phone"

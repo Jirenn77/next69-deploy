@@ -21,8 +21,8 @@ import {
   ChevronsRight,
   ChevronDown,
   Leaf,
+  Plus,
   Archive,
-  Search,
   X,
   Edit,
   Eye,
@@ -278,126 +278,128 @@ export default function EmployeeManagement() {
           </div>
 
           {/* Menu Items with Active States */}
-          <div className="w-full px-4 space-y-1 overflow-y-auto flex-grow custom-scrollbar">
-            <Link href="/home" passHref>
-              <div
-                className={`w-full p-3 rounded-lg text-left flex items-center cursor-pointer transition-all ${router.pathname === "/home" ? "bg-emerald-600 shadow-md" : "hover:bg-emerald-600/70"}`}
-              >
-                <div
-                  className={`p-1.5 mr-3 rounded-lg ${router.pathname === "/home" ? "bg-white text-emerald-700" : "bg-emerald-900/30 text-white"}`}
-                >
-                  <Home size={18} />
-                </div>
-                <span>Dashboard</span>
-                {router.pathname === "/home" && (
-                  <motion.div
-                    className="ml-auto w-2 h-2 bg-white rounded-full"
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                  />
-                )}
-              </div>
-            </Link>
+<div className="w-full px-4 space-y-1 overflow-y-auto flex-grow custom-scrollbar">
+  <Link href="/home" passHref>
+    <div
+      className={`w-full p-3 rounded-lg text-left flex items-center cursor-pointer transition-all ${router.pathname === "/home" ? "bg-emerald-600 shadow-md" : "hover:bg-emerald-600/70"}`}
+    >
+      <div
+        className={`p-1.5 mr-3 rounded-lg ${router.pathname === "/home" ? "bg-white text-emerald-700" : "bg-emerald-900/30 text-white"}`}
+      >
+        <Home size={18} />
+      </div>
+      <span>Dashboard</span>
+      {router.pathname === "/home" && (
+        <motion.div
+          className="ml-auto w-2 h-2 bg-white rounded-full"
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+        />
+      )}
+    </div>
+  </Link>
 
-            <Link href="/roles" passHref>
-              <div
-                className={`w-full p-3 rounded-lg text-left flex items-center cursor-pointer transition-all ${router.pathname === "/roles" ? "bg-emerald-600 shadow-md" : "hover:bg-emerald-600/70"}`}
-              >
-                <div
-                  className={`p-1.5 mr-3 rounded-lg ${router.pathname === "/roles" ? "bg-white text-emerald-700" : "bg-emerald-900/30 text-white"}`}
-                >
-                  <Shield size={18} />
-                </div>
-                <span>Role Settings</span>
-                {router.pathname === "/roles" && (
-                  <motion.div
-                    className="ml-auto w-2 h-2 bg-white rounded-full"
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                  />
-                )}
-              </div>
-            </Link>
+  <Link href="/roles" passHref>
+    <div
+      className={`w-full p-3 rounded-lg text-left flex items-center cursor-pointer transition-all ${router.pathname === "/roles" ? "bg-emerald-600 shadow-md" : "hover:bg-emerald-600/70"}`}
+    >
+      <div
+        className={`p-1.5 mr-3 rounded-lg ${router.pathname === "/roles" ? "bg-white text-emerald-700" : "bg-emerald-900/30 text-white"}`}
+      >
+        <Shield size={18} />
+      </div>
+      <span>Role Settings</span>
+      {router.pathname === "/roles" && (
+        <motion.div
+          className="ml-auto w-2 h-2 bg-white rounded-full"
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+        />
+      )}
+    </div>
+  </Link>
 
-            <Link href="/employeeM" passHref>
-              <div
-                className={`w-full p-3 rounded-lg text-left flex items-center cursor-pointer transition-all ${router.pathname === "/employeeM" ? "bg-emerald-600 shadow-md" : "hover:bg-emerald-600/70"}`}
-              >
-                <div
-                  className={`p-1.5 mr-3 rounded-lg ${router.pathname === "/employeeM" ? "bg-white text-emerald-700" : "bg-emerald-900/30 text-white"}`}
-                >
-                  <Users size={18} />
-                </div>
-                <span>Employee Management</span>
-                {router.pathname === "/employeeM" && (
-                  <motion.div
-                    className="ml-auto w-2 h-2 bg-white rounded-full"
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                  />
-                )}
-              </div>
-            </Link>
+  <Link href="/employeeM" passHref>
+    <div
+      className={`w-full p-3 rounded-lg text-left flex items-center cursor-pointer transition-all ${router.pathname === "/employeeM" ? "bg-emerald-600 shadow-md" : "hover:bg-emerald-600/70"}`}
+    >
+      <div
+        className={`p-1.5 mr-3 rounded-lg ${router.pathname === "/employeeM" ? "bg-white text-emerald-700" : "bg-emerald-900/30 text-white"}`}
+      >
+        <Users size={18} />
+      </div>
+      <span>Employee Management</span>
+      {router.pathname === "/employeeM" && (
+        <motion.div
+          className="ml-auto w-2 h-2 bg-white rounded-full"
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+        />
+      )}
+    </div>
+  </Link>
 
-            <Link href="/userManage" passHref>
-              <div
-                className={`w-full p-3 rounded-lg text-left flex items-center cursor-pointer transition-all ${router.pathname === "/userManage" ? "bg-emerald-600 shadow-md" : "hover:bg-emerald-600/70"}`}
-              >
-                <div
-                  className={`p-1.5 mr-3 rounded-lg ${router.pathname === "/userManage" ? "bg-white text-emerald-700" : "bg-emerald-900/30 text-white"}`}
-                >
-                  <Users size={18} />
-                </div>
-                <span>User Management</span>
-                {router.pathname === "/userManage" && (
-                  <motion.div
-                    className="ml-auto w-2 h-2 bg-white rounded-full"
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                  />
-                )}
-              </div>
-            </Link>
+  <Link href="/userManage" passHref>
+    <div
+      className={`w-full p-3 rounded-lg text-left flex items-center cursor-pointer transition-all ${router.pathname === "/userManage" ? "bg-emerald-600 shadow-md" : "hover:bg-emerald-600/70"}`}
+    >
+      <div
+        className={`p-1.5 mr-3 rounded-lg ${router.pathname === "/userManage" ? "bg-white text-emerald-700" : "bg-emerald-900/30 text-white"}`}
+      >
+        <Users size={18} />
+      </div>
+      <span>User Management</span>
+      {router.pathname === "/userManage" && (
+        <motion.div
+          className="ml-auto w-2 h-2 bg-white rounded-full"
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+        />
+      )}
+    </div>
+  </Link>
 
-            <Link href="/branchM" passHref>
-              <div
-                className={`w-full p-3 rounded-lg text-left flex items-center cursor-pointer transition-all ${router.pathname === "/branchM" ? "bg-emerald-600 shadow-md" : "hover:bg-emerald-600/70"}`}
-              >
-                <div
-                  className={`p-1.5 mr-3 rounded-lg ${router.pathname === "/branchM" ? "bg-white text-emerald-700" : "bg-emerald-900/30 text-white"}`}
-                >
-                  <Home size={18} />
-                </div>
-                <span>Branch Management</span>
-                {router.pathname === "/branchM" && (
-                  <motion.div
-                    className="ml-auto w-2 h-2 bg-white rounded-full"
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                  />
-                )}
-              </div>
-            </Link>
-            <Link href="/archivees" passHref>
-                          <div
-                            className={`w-full p-3 rounded-lg text-left flex items-center cursor-pointer transition-all ${pathname === "/archivees" ? "bg-emerald-600 shadow-md" : "hover:bg-emerald-600/70"}`}
-                          >
-                            <div
-                              className={`p-1.5 mr-3 rounded-lg ${pathname === "/archivees" ? "bg-white text-emerald-700" : "bg-emerald-900/30 text-white"}`}
-                            >
-                              <Archive size={18} />
-                            </div>
-                            <span>Archives</span>
-                            {pathname === "/archivees" && (
-                              <motion.div
-                                className="ml-auto w-2 h-2 bg-white rounded-full"
-                                initial={{ scale: 0 }}
-                                animate={{ scale: 1 }}
-                              />
-                            )}
-                          </div>
-                        </Link>
-          </div>
+  <Link href="/branchM" passHref>
+    <div
+      className={`w-full p-3 rounded-lg text-left flex items-center cursor-pointer transition-all ${router.pathname === "/branchM" ? "bg-emerald-600 shadow-md" : "hover:bg-emerald-600/70"}`}
+    >
+      <div
+        className={`p-1.5 mr-3 rounded-lg ${router.pathname === "/branchM" ? "bg-white text-emerald-700" : "bg-emerald-900/30 text-white"}`}
+      >
+        <Home size={18} />
+      </div>
+      <span>Branch Management</span>
+      {router.pathname === "/branchM" && (
+        <motion.div
+          className="ml-auto w-2 h-2 bg-white rounded-full"
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+        />
+      )}
+    </div>
+  </Link>
+
+  {/* Archive Tab */}
+  <Link href="/archivees" passHref>
+    <div
+      className={`w-full p-3 rounded-lg text-left flex items-center cursor-pointer transition-all ${router.pathname === "/archivees" ? "bg-emerald-600 shadow-md" : "hover:bg-emerald-600/70"}`}
+    >
+      <div
+        className={`p-1.5 mr-3 rounded-lg ${router.pathname === "/archivees" ? "bg-white text-emerald-700" : "bg-emerald-900/30 text-white"}`}
+      >
+        <Archive size={18} />
+      </div>
+      <span>Archive</span>
+      {router.pathname === "/archivees" && (
+        <motion.div
+          className="ml-auto w-2 h-2 bg-white rounded-full"
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+        />
+      )}
+    </div>
+  </Link>
+</div>
 
           {/* Enhanced Sidebar Footer */}
           <motion.div
