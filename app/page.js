@@ -285,29 +285,32 @@ export default function Login() {
 
     // Check if admin login was successful
     if (res.data && (res.data.role === "admin" || res.data.admin_id)) {
-      toast.success("Admin login successful!");
-      isAdminLoginSuccessful = true;
-      
-      const adminUserData = {
-        id: res.data.admin_id || res.data.id,
-        admin_id: res.data.admin_id || res.data.id,
-        name: 'Admin',
-        email: res.data.email,
-        role: 'admin',
-        username: res.data.username || res.data.email,
-        status: 'Active'
-      };
-      
-      localStorage.setItem("user", JSON.stringify(adminUserData));
-      localStorage.setItem("loginAttempts", "0");
-      setAuthCookie(adminUserData); // Set authentication cookie
-      
-      console.log("Admin login - stored user data:", adminUserData);
-      
-      // Use window.location.replace to completely remove login page from history
-      window.location.replace("/home");
-      return;
-    } else {
+  toast.success("Admin login successful!");
+  isAdminLoginSuccessful = true;
+  
+  // Fetch the actual admin data with branch information
+  const adminUserData = {
+    id: res.data.admin_id || res.data.id,
+    admin_id: res.data.admin_id || res.data.id,
+    name: res.data.name || 'Admin',
+    email: res.data.email,
+    role: 'admin',
+    branch: res.data.branch_name || 'Pabayo Gomez Street',
+    branch_id: res.data.branch_id || 1,
+    branch_name: res.data.branch_name || 'Pabayo Gomez Street',
+    username: res.data.username || res.data.email,
+    status: 'Active'
+  };
+  
+  localStorage.setItem("user", JSON.stringify(adminUserData));
+  localStorage.setItem("loginAttempts", "0");
+  setAuthCookie(adminUserData);
+  
+  console.log("Admin login - stored user data:", adminUserData);
+  
+  window.location.replace("/home");
+  return;
+}else {
       // Admin login returned success but no admin data
       console.log("Admin login returned unexpected response:", res.data);
       adminLoginError = "Invalid admin credentials.";

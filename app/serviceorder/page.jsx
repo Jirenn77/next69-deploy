@@ -785,28 +785,27 @@ useEffect(() => {
 
   // Determine which branch to use - FIXED LOGIC
   let finalBranchData = null;
-  
-  if (currentUser?.role === 'admin' && selectedBranch) {
-    // Admin with selected branch
-    finalBranchData = {
-      branch_id: selectedBranch.id,
-      branch_name: selectedBranch.name,
-      branch: selectedBranch.name,
-      employee_name: currentUser?.name || 'Admin',
-      employee_id: currentUser?.id,
-      handledBy: currentUser?.name || 'Admin'
-    };
-  } else {
-    // Non-admin or admin without branch selection - use current user's branch
-    finalBranchData = {
-      branch_id: currentUser?.branch_id,
-      branch_name: currentUser?.branch_name || currentUser?.branch,
-      branch: currentUser?.branch_name || currentUser?.branch,
-      employee_name: currentUser?.name,
-      employee_id: currentUser?.id,
-      handledBy: currentUser?.name
-    };
-  }
+
+if (currentUser?.role === 'admin' && selectedBranch) {
+  finalBranchData = {
+    branch_id: selectedBranch.id,
+    branch_name: selectedBranch.name,
+    branch: selectedBranch.name,
+    employee_name: currentUser?.name || 'Admin',
+    employee_id: currentUser?.id,
+    handledBy: currentUser?.name || 'Admin'
+  };
+} else {
+  // Make sure this fallback has proper branch data
+  finalBranchData = {
+    branch_id: currentUser?.branch_id || 1, // Ensure fallback
+    branch_name: currentUser?.branch_name || currentUser?.branch || 'Pabayo Gomez Street', // Ensure fallback
+    branch: currentUser?.branch_name || currentUser?.branch || 'Pabayo Gomez Street', // Ensure fallback
+    employee_name: currentUser?.name || 'Admin',
+    employee_id: currentUser?.id,
+    handledBy: currentUser?.name || 'Admin'
+  };
+}
 
   console.log("Final Branch Data:", finalBranchData);
   console.log("Current User:", currentUser);
