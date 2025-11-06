@@ -294,9 +294,6 @@ export default function Login() {
         name: 'Admin',
         email: res.data.email,
         role: 'admin',
-        branch: 'Pabayo Gomez Street',
-        branch_id: 1,
-        branch_name: 'Pabayo Gomez Street',
         username: res.data.username || res.data.email,
         status: 'Active'
       };

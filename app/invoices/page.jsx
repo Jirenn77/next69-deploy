@@ -1723,33 +1723,37 @@ export default function InvoicesPage() {
               Services
             </h3>
             <div className="space-y-3">
-              {selectedInvoice.services.map((service, index) => {
-                // Calculate service values
-                const servicePrice = typeof service.price === 'string' 
-                  ? parseFloat(service.price.replace(/[₱,]/g, '')) 
-                  : service.price || 0;
-                const serviceQuantity = service.quantity || 1;
-                const serviceTotal = servicePrice * serviceQuantity;
-                
-                return (
-                  <div
-                    key={`service-${selectedInvoice.invoiceNumber}-${index}`}
-                    className="flex justify-between items-start py-2 border-b border-gray-100 last:border-0"
-                  >
-                    <div className="flex-1">
-                      <p className="text-gray-800 font-medium">
-                        {service.name}
-                      </p>
-                      <p className="text-sm text-gray-500 mt-1">
-                        Qty: {serviceQuantity} × {formatCurrency(servicePrice)}
-                      </p>
-                    </div>
-                    <p className="text-gray-900 font-medium tabular-nums">
-                      {formatCurrency(serviceTotal)}
-                    </p>
-                  </div>
-                );
-              })}
+{selectedInvoice.services.map((service, index) => {
+    // Use the stored transaction price from invoices table
+    const servicePrice = service.total_price / service.quantity; // Calculate unit price from stored total
+    const serviceQuantity = service.quantity || 1;
+    const serviceTotal = service.total_price; // Use the stored total price
+    
+    return (
+        <div
+            key={`service-${selectedInvoice.invoiceNumber}-${index}`}
+            className="flex justify-between items-start py-2 border-b border-gray-100 last:border-0"
+        >
+            <div className="flex-1">
+                <p className="text-gray-800 font-medium">
+                    {service.name}
+                </p>
+                <p className="text-sm text-gray-500 mt-1">
+                    Qty: {serviceQuantity} × {formatCurrency(servicePrice)}
+                </p>
+                {/* Show discount badge if applicable */}
+                {service.originalPrice && service.originalPrice > servicePrice && (
+                    <span className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full mt-1">
+                        Discount Applied
+                    </span>
+                )}
+            </div>
+            <p className="text-gray-900 font-medium tabular-nums">
+                {formatCurrency(serviceTotal)}
+            </p>
+        </div>
+    );
+})}
             </div>
           </div>
 
