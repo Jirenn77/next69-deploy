@@ -150,67 +150,66 @@ export default function InvoicesPage() {
     fetchBranches();
   }, []);
 
-
   useEffect(() => {
-  const fetchInvoices = async () => {
-    try {
-      setIsLoading(true);
-      setError(null);
-      
-      // Get user data from localStorage
-      const userData = JSON.parse(localStorage.getItem("user") || "{}");
-      const userBranchName = userData.branch_name || userData.branch;
-      const userRole = userData.role;
+    const fetchInvoices = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
 
-      let url = "https://api.lizlyskincare.sbs/getInvoices.php";
-      
-      // Always filter by branch for both receptionist and admin
-      if (userBranchName) {
-        url += `?branch=${encodeURIComponent(userBranchName)}`;
+        // Get user data from localStorage
+        const userData = JSON.parse(localStorage.getItem("user") || "{}");
+        const userBranchName = userData.branch_name || userData.branch;
+        const userRole = userData.role;
+
+        let url = "https://api.lizlyskincare.sbs/getInvoices.php";
+
+        // Always filter by branch for both receptionist and admin
+        if (userBranchName) {
+          url += `?branch=${encodeURIComponent(userBranchName)}`;
+        }
+
+        const response = await fetch(url, {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(`Server responded with status ${response.status}`);
+        }
+
+        const result = await response.json();
+        setInvoices(result);
+        setFilteredInvoices(result);
+      } catch (error) {
+        console.error("Failed to fetch invoices:", error);
+        setError(error.message);
+        toast.error(`Failed to load invoices: ${error.message}`);
+
+        // Fallback to mock data
+        const userData = JSON.parse(localStorage.getItem("user") || "{}");
+        const userBranchName = userData.branch_name || userData.branch;
+
+        const mockData = [
+          {
+            invoiceNumber: "000001",
+            name: "Sample Customer",
+            dateIssued: "Feb 26, 2025",
+            totalAmount: "₱150.00",
+            paymentStatus: "Paid",
+            services: [{ name: "Sample Service", price: "₱150.00" }],
+            branch: userBranchName || "Main",
+          },
+        ];
+        setInvoices(mockData);
+        setFilteredInvoices(mockData);
+      } finally {
+        setIsLoading(false);
       }
+    };
 
-      const response = await fetch(url, {
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(`Server responded with status ${response.status}`);
-      }
-
-      const result = await response.json();
-      setInvoices(result);
-      setFilteredInvoices(result);
-    } catch (error) {
-      console.error("Failed to fetch invoices:", error);
-      setError(error.message);
-      toast.error(`Failed to load invoices: ${error.message}`);
-      
-      // Fallback to mock data
-      const userData = JSON.parse(localStorage.getItem("user") || "{}");
-      const userBranchName = userData.branch_name || userData.branch;
-      
-      const mockData = [
-        {
-          invoiceNumber: "000001",
-          name: "Sample Customer",
-          dateIssued: "Feb 26, 2025",
-          totalAmount: "₱150.00",
-          paymentStatus: "Paid",
-          services: [{ name: "Sample Service", price: "₱150.00" }],
-          branch: userBranchName || "Main",
-        },
-      ];
-      setInvoices(mockData);
-      setFilteredInvoices(mockData);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  fetchInvoices();
-}, []);
+    fetchInvoices();
+  }, []);
 
   useEffect(() => {
     if (searchQuery.trim() === "") {
@@ -231,10 +230,13 @@ export default function InvoicesPage() {
     // Peso formatting
     const formatPeso = (value) => {
       const number = Number(String(value).replace(/[^0-9.-]+/g, ""));
-      return "PHP " + number.toLocaleString("en-PH", {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      });
+      return (
+        "PHP " +
+        number.toLocaleString("en-PH", {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        })
+      );
     };
 
     // Header - Clinic Info
@@ -937,9 +939,15 @@ export default function InvoicesPage() {
                     <User size={16} />
                   </div>
                   <div>
-                    <p className="text-sm font-medium">{currentUser?.name || "Reception User"}</p>
+                    <p className="text-sm font-medium">
+                      {currentUser?.name || "Reception User"}
+                    </p>
                     <p className="text-xs text-emerald-300">
-                      {currentUser?.role === "admin" ? "Administrator" : currentUser?.role === "receptionist" ? "Receptionist" : "User"}
+                      {currentUser?.role === "admin"
+                        ? "Administrator"
+                        : currentUser?.role === "receptionist"
+                          ? "Receptionist"
+                          : "User"}
                     </p>
                   </div>
                 </div>
@@ -961,7 +969,6 @@ export default function InvoicesPage() {
         </nav>
 
         <main className="flex-1 p-6 bg-gray-50 ml-64">
-     
           {/* Invoices View */}
           {activeView === "invoices" && (
             <motion.div
@@ -973,16 +980,15 @@ export default function InvoicesPage() {
               {/* Header */}
               <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
                 <div>
-        <h1 className="text-2xl font-bold text-gray-800">
-          Invoice Management
-        </h1>
-        <p className="text-sm text-gray-500 mt-1">
-          {currentUser?.branch_name ? 
-            `Viewing invoices from ${currentUser.branch_name} branch` : 
-            'View and manage all customer invoices'
-          }
-        </p>
-      </div>
+                  <h1 className="text-2xl font-bold text-gray-800">
+                    Invoice Management
+                  </h1>
+                  <p className="text-sm text-gray-500 mt-1">
+                    {currentUser?.branch_name
+                      ? `Viewing invoices from ${currentUser.branch_name} branch`
+                      : "View and manage all customer invoices"}
+                  </p>
+                </div>
 
                 <div className="flex flex-col sm:flex-row gap-3 mt-4 md:mt-0">
                   <motion.button
@@ -1078,11 +1084,12 @@ export default function InvoicesPage() {
                             currentInvoices.map((invoice) => (
                               <motion.tr
                                 key={`invoice-${invoice.invoiceNumber}`}
-                                className={`hover:bg-gray-50 ${selectedInvoice?.invoiceNumber ===
-                                    invoice.invoiceNumber
+                                className={`hover:bg-gray-50 ${
+                                  selectedInvoice?.invoiceNumber ===
+                                  invoice.invoiceNumber
                                     ? "bg-emerald-50"
                                     : ""
-                                  }`}
+                                }`}
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
                                 transition={{ duration: 0.2 }}
@@ -1101,10 +1108,11 @@ export default function InvoicesPage() {
                                 </td>
                                 <td className="px-4 py-3 whitespace-nowrap">
                                   <span
-                                    className={`px-2 py-1 text-xs rounded-full ${invoice.paymentStatus === "Paid"
+                                    className={`px-2 py-1 text-xs rounded-full ${
+                                      invoice.paymentStatus === "Paid"
                                         ? "bg-green-100 text-green-800"
                                         : "bg-yellow-100 text-yellow-800"
-                                      }`}
+                                    }`}
                                   >
                                     {invoice.paymentStatus}
                                   </span>
@@ -1241,10 +1249,11 @@ export default function InvoicesPage() {
                                     <>
                                       <button
                                         onClick={() => paginate(1)}
-                                        className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${1 === currentPage
+                                        className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
+                                          1 === currentPage
                                             ? "z-10 bg-emerald-50 border-emerald-500 text-emerald-600"
                                             : "bg-white border-gray-300 text-gray-500 hover:bg-gray-50"
-                                          }`}
+                                        }`}
                                         key="page-1"
                                       >
                                         1
@@ -1265,10 +1274,11 @@ export default function InvoicesPage() {
                                       <button
                                         key={`page-${pageNumber}`} // Make sure this is unique
                                         onClick={() => paginate(pageNumber)}
-                                        className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${pageNumber === currentPage
+                                        className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
+                                          pageNumber === currentPage
                                             ? "z-10 bg-emerald-50 border-emerald-500 text-emerald-600"
                                             : "bg-white border-gray-300 text-gray-500 hover:bg-gray-50"
-                                          }`}
+                                        }`}
                                         aria-current={
                                           pageNumber === currentPage
                                             ? "page"
@@ -1289,10 +1299,11 @@ export default function InvoicesPage() {
                                       )}
                                       <button
                                         onClick={() => paginate(totalPages)}
-                                        className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${totalPages === currentPage
+                                        className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
+                                          totalPages === currentPage
                                             ? "z-10 bg-emerald-50 border-emerald-500 text-emerald-600"
                                             : "bg-white border-gray-300 text-gray-500 hover:bg-gray-50"
-                                          }`}
+                                        }`}
                                         key={`page-${totalPages}`}
                                       >
                                         {totalPages}
@@ -1325,228 +1336,290 @@ export default function InvoicesPage() {
                   </div>
 
                   {/* Invoice Detail Panel */}
-<AnimatePresence>
-  {selectedInvoice && (
-    <motion.div
-      key={`detail-${selectedInvoice.invoiceNumber}`}
-      className="lg:w-1/3"
-      initial={{ opacity: 0, x: 50 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: 50 }}
-      transition={{ duration: 0.3 }}
-    >
-      <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-6 sticky top-4">
-        <div className="flex justify-between items-center mb-6">
-          <div>
-            <h2 className="text-xl font-bold text-gray-800">
-              Invoice #{selectedInvoice.invoiceNumber}
-            </h2>
-            <p className="text-sm text-gray-500">
-              {new Date(selectedInvoice.dateIssued).toLocaleString("en-US", {
-                year: "numeric",
-                month: "short",
-                day: "numeric",
-                hour: "2-digit",
-                minute: "2-digit",
-              })}
-            </p>
-          </div>
-          <button
-            onClick={() => setSelectedInvoice(null)}
-            className="text-gray-500 hover:text-gray-700"
-          >
-            <X size={20} />
-          </button>
-        </div>
+                  <AnimatePresence>
+                    {selectedInvoice && (
+                      <motion.div
+                        key={`detail-${selectedInvoice.invoiceNumber}`}
+                        className="lg:w-1/3"
+                        initial={{ opacity: 0, x: 50 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: 50 }}
+                        transition={{ duration: 0.3 }}
+                      >
+                        <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-6 sticky top-4">
+                          <div className="flex justify-between items-center mb-6">
+                            <div>
+                              <h2 className="text-xl font-bold text-gray-800">
+                                Invoice #{selectedInvoice.invoiceNumber}
+                              </h2>
+                              <p className="text-sm text-gray-500">
+                                {new Date(
+                                  selectedInvoice.dateIssued
+                                ).toLocaleString("en-US", {
+                                  year: "numeric",
+                                  month: "short",
+                                  day: "numeric",
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                })}
+                              </p>
+                            </div>
+                            <button
+                              onClick={() => setSelectedInvoice(null)}
+                              className="text-gray-500 hover:text-gray-700"
+                            >
+                              <X size={20} />
+                            </button>
+                          </div>
 
-        <div className="space-y-6">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <h3 className="text-sm font-medium text-gray-500 mb-1">
-                Customer
-              </h3>
-              <p className="text-gray-900 font-medium">
-                {selectedInvoice.name}
-              </p>
-            </div>
-            <div>
-              <h3 className="text-sm font-medium text-gray-500 mb-1">
-                Status
-              </h3>
-              <span
-                className={`px-3 py-1 text-xs rounded-full font-medium ${
-                  selectedInvoice.paymentStatus === "Paid"
-                    ? "bg-green-100 text-green-800"
-                    : "bg-yellow-100 text-yellow-800"
-                }`}
-              >
-                {selectedInvoice.paymentStatus}
-              </span>
-            </div>
-          </div>
+                          <div className="space-y-6">
+                            <div className="grid grid-cols-2 gap-4">
+                              <div>
+                                <h3 className="text-sm font-medium text-gray-500 mb-1">
+                                  Customer
+                                </h3>
+                                <p className="text-gray-900 font-medium">
+                                  {selectedInvoice.name}
+                                </p>
+                              </div>
+                              <div>
+                                <h3 className="text-sm font-medium text-gray-500 mb-1">
+                                  Status
+                                </h3>
+                                <span
+                                  className={`px-3 py-1 text-xs rounded-full font-medium ${
+                                    selectedInvoice.paymentStatus === "Paid"
+                                      ? "bg-green-100 text-green-800"
+                                      : "bg-yellow-100 text-yellow-800"
+                                  }`}
+                                >
+                                  {selectedInvoice.paymentStatus}
+                                </span>
+                              </div>
+                            </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <h3 className="text-sm font-medium text-gray-500 mb-1">
-                Branch
-              </h3>
-              <p className="text-gray-900">
-                {selectedInvoice.branch || "Main"}
-              </p>
-            </div>
-            <div>
-              <h3 className="text-sm font-medium text-gray-500 mb-1">
-                Handled By
-              </h3>
-              <p className="text-gray-900">
-                {selectedInvoice.handledBy || "Staff"}
-              </p>
-            </div>
-          </div>
+                            <div className="grid grid-cols-2 gap-4">
+                              <div>
+                                <h3 className="text-sm font-medium text-gray-500 mb-1">
+                                  Branch
+                                </h3>
+                                <p className="text-gray-900">
+                                  {selectedInvoice.branch || "Main"}
+                                </p>
+                              </div>
+                              <div>
+                                <h3 className="text-sm font-medium text-gray-500 mb-1">
+                                  Handled By
+                                </h3>
+                                <p className="text-gray-900">
+                                  {selectedInvoice.handledBy || "Staff"}
+                                </p>
+                              </div>
+                            </div>
 
-          <div className="border-t border-gray-200 pt-4">
-            <h3 className="text-sm font-medium text-gray-500 mb-3">
-              Services
-            </h3>
-            <div className="space-y-3">
-              {selectedInvoice.services.map((service, index) => {
-                // Calculate service values
-                const servicePrice = typeof service.price === 'string' 
-                  ? parseFloat(service.price.replace(/[₱,]/g, '')) 
-                  : service.price || 0;
-                const serviceQuantity = service.quantity || 1;
-                const serviceTotal = servicePrice * serviceQuantity;
-                
-                return (
-                  <div
-                    key={`service-${selectedInvoice.invoiceNumber}-${index}`}
-                    className="flex justify-between items-start py-2 border-b border-gray-100 last:border-0"
-                  >
-                    <div className="flex-1">
-                      <p className="text-gray-800 font-medium">
-                        {service.name}
-                      </p>
-                      <p className="text-sm text-gray-500 mt-1">
-                        Qty: {serviceQuantity} × {formatCurrency(servicePrice)}
-                      </p>
-                    </div>
-                    <p className="text-gray-900 font-medium tabular-nums">
-                      {formatCurrency(serviceTotal)}
-                    </p>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+                            {/* Services Section with Scrollbar */}
+                            <div className="border-t border-gray-200 pt-4">
+                              <h3 className="text-sm font-medium text-gray-500 mb-3">
+                                Services ({selectedInvoice.services.length})
+                              </h3>
+                              <div
+                                className="space-y-3 max-h-64 overflow-y-auto pr-2 
+                         scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 
+                         scrollbar-thumb-rounded-full scrollbar-track-rounded-full
+                         hover:scrollbar-thumb-gray-400"
+                              >
+                                {selectedInvoice.services.map(
+                                  (service, index) => {
+                                    // Use the stored transaction price from invoices table
+                                    const servicePrice =
+                                      service.total_price / service.quantity; // Calculate unit price from stored total
+                                    const serviceQuantity =
+                                      service.quantity || 1;
+                                    const serviceTotal = service.total_price; // Use the stored total price
 
-         {/* Totals Section - Fallback version */}
-<div className="border-t border-gray-200 pt-4 space-y-3 text-sm">
-  {(() => {
-    // Calculate subtotal from services
-    const subtotal = selectedInvoice.services.reduce((sum, service) => {
-      const servicePrice = typeof service.price === 'string' 
-        ? parseFloat(service.price.replace(/[₱,]/g, '')) 
-        : service.price || 0;
-      const serviceQuantity = service.quantity || 1;
-      return sum + (servicePrice * serviceQuantity);
-    }, 0);
+                                    return (
+                                      <div
+                                        key={`service-${selectedInvoice.invoiceNumber}-${index}`}
+                                        className="flex justify-between items-start py-2 border-b border-gray-100 last:border-0 pr-2"
+                                      >
+                                        <div className="flex-1">
+                                          <p className="text-gray-800 font-medium">
+                                            {service.name}
+                                          </p>
+                                          <p className="text-sm text-gray-500 mt-1">
+                                            Qty: {serviceQuantity} ×{" "}
+                                            {formatCurrency(servicePrice)}
+                                          </p>
+                                          {/* Show discount badge if applicable */}
+                                          {service.originalPrice &&
+                                            service.originalPrice >
+                                              servicePrice && (
+                                              <span className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full mt-1">
+                                                Discount Applied
+                                              </span>
+                                            )}
+                                        </div>
+                                        <p className="text-gray-900 font-medium tabular-nums">
+                                          {formatCurrency(serviceTotal)}
+                                        </p>
+                                      </div>
+                                    );
+                                  }
+                                )}
+                              </div>
+                            </div>
 
-    const totalAmount = typeof selectedInvoice.totalAmount === 'string'
-      ? parseFloat(selectedInvoice.totalAmount.replace(/[₱,]/g, ''))
-      : selectedInvoice.totalAmount || 0;
+                            {/* Totals Section - Fallback version */}
+                            <div className="border-t border-gray-200 pt-4 space-y-3 text-sm">
+                              {(() => {
+                                // Calculate subtotal from services
+                                const subtotal =
+                                  selectedInvoice.services.reduce(
+                                    (sum, service) => {
+                                      const servicePrice =
+                                        typeof service.price === "string"
+                                          ? parseFloat(
+                                              service.price.replace(/[₱,]/g, "")
+                                            )
+                                          : service.price || 0;
+                                      const serviceQuantity =
+                                        service.quantity || 1;
+                                      return (
+                                        sum + servicePrice * serviceQuantity
+                                      );
+                                    },
+                                    0
+                                  );
 
-    const totalDiscount = subtotal - totalAmount;
+                                const totalAmount =
+                                  typeof selectedInvoice.totalAmount ===
+                                  "string"
+                                    ? parseFloat(
+                                        selectedInvoice.totalAmount.replace(
+                                          /[₱,]/g,
+                                          ""
+                                        )
+                                      )
+                                    : selectedInvoice.totalAmount || 0;
 
-    // Check if customer might be a member (you can add this to your backend)
-    const isMember = selectedInvoice.isMember || selectedInvoice.name?.includes('Member') || false;
-    const membershipType = selectedInvoice.membershipType || 'premium';
+                                const totalDiscount = subtotal - totalAmount;
 
-    // Estimate membership discount (50% for premium members)
-    const estimatedMembershipDiscount = isMember ? totalDiscount * 0.7 : 0; // Assume 70% of discount is from membership
+                                // Check if customer might be a member (you can add this to your backend)
+                                const isMember =
+                                  selectedInvoice.isMember ||
+                                  selectedInvoice.name?.includes("Member") ||
+                                  false;
+                                const membershipType =
+                                  selectedInvoice.membershipType || "premium";
 
-    return (
-      <>
-        {/* Subtotal */}
-        <div className="flex justify-between">
-          <span className="text-gray-600">Subtotal:</span>
-          <span className="tabular-nums text-gray-800">
-            {formatCurrency(subtotal)}
-          </span>
-        </div>
+                                // Estimate membership discount (50% for premium members)
+                                const estimatedMembershipDiscount = isMember
+                                  ? totalDiscount * 0.7
+                                  : 0; // Assume 70% of discount is from membership
 
-        {/* Membership Discount (estimated) */}
-        {isMember && estimatedMembershipDiscount > 0 && (
-          <div className="flex justify-between text-emerald-600">
-            <span>Membership Discount ({membershipType === 'premium' ? '50%' : 'Standard'}):</span>
-            <span className="tabular-nums">
-              -{formatCurrency(estimatedMembershipDiscount)}
-            </span>
-          </div>
-        )}
+                                return (
+                                  <>
+                                    {/* Subtotal */}
+                                    <div className="flex justify-between">
+                                      <span className="text-gray-600">
+                                        Subtotal:
+                                      </span>
+                                      <span className="tabular-nums text-gray-800">
+                                        {formatCurrency(subtotal)}
+                                      </span>
+                                    </div>
 
-        {/* Other Discounts */}
-        {totalDiscount > 0 && (
-          <div className="flex justify-between text-blue-600">
-            <span>Other Discounts:</span>
-            <span className="tabular-nums">
-              -{formatCurrency(totalDiscount - estimatedMembershipDiscount)}
-            </span>
-          </div>
-        )}
+                                    {/* Membership Discount (estimated) */}
+                                    {isMember &&
+                                      estimatedMembershipDiscount > 0 && (
+                                        <div className="flex justify-between text-emerald-600">
+                                          <span>
+                                            Membership Discount (
+                                            {membershipType === "premium"
+                                              ? "50%"
+                                              : "Standard"}
+                                            ):
+                                          </span>
+                                          <span className="tabular-nums">
+                                            -
+                                            {formatCurrency(
+                                              estimatedMembershipDiscount
+                                            )}
+                                          </span>
+                                        </div>
+                                      )}
 
-        {/* Total */}
-        <div className="border-t pt-3 mt-3">
-          <div className="flex justify-between font-bold text-base">
-            <span className="text-gray-800">TOTAL:</span>
-            <span className="tabular-nums text-emerald-600">
-              {formatCurrency(totalAmount)}
-            </span>
-          </div>
-        </div>
+                                    {/* Other Discounts */}
+                                    {totalDiscount > 0 && (
+                                      <div className="flex justify-between text-blue-600">
+                                        <span>Other Discounts:</span>
+                                        <span className="tabular-nums">
+                                          -
+                                          {formatCurrency(
+                                            totalDiscount -
+                                              estimatedMembershipDiscount
+                                          )}
+                                        </span>
+                                      </div>
+                                    )}
 
-        {/* Membership Badge */}
-        {isMember && (
-          <div className="mt-2 text-xs text-emerald-600 text-center">
-            ✓ Membership benefits applied
-          </div>
-        )}
-      </>
-    );
-  })()}
-</div>
+                                    {/* Total */}
+                                    <div className="border-t pt-3 mt-3">
+                                      <div className="flex justify-between font-bold text-base">
+                                        <span className="text-gray-800">
+                                          TOTAL:
+                                        </span>
+                                        <span className="tabular-nums text-emerald-600">
+                                          {formatCurrency(totalAmount)}
+                                        </span>
+                                      </div>
+                                    </div>
 
-          <div className="flex space-x-3 pt-2">
-            <motion.button
-              onClick={() => handlePrintInvoice(selectedInvoice)}
-              className="flex-1 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-lg text-sm font-medium flex items-center justify-center"
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-            >
-              <Printer className="mr-2" size={16} />
-              Print Invoice
-            </motion.button>
-            {selectedInvoice.paymentStatus === "Pending" && (
-              <motion.button
-                onClick={() =>
-                  handlePaymentStatusUpdate(
-                    selectedInvoice.invoiceNumber,
-                    "Paid"
-                  )
-                }
-                className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-medium flex items-center justify-center"
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                <Check className="mr-2" size={16} />
-                Mark as Paid
-              </motion.button>
-            )}
-          </div>
-        </div>
-      </div>
-    </motion.div>
-  )}
-</AnimatePresence>
+                                    {/* Membership Badge */}
+                                    {isMember && (
+                                      <div className="mt-2 text-xs text-emerald-600 text-center">
+                                        ✓ Membership benefits applied
+                                      </div>
+                                    )}
+                                  </>
+                                );
+                              })()}
+                            </div>
+
+                            <div className="flex space-x-3 pt-2">
+                              <motion.button
+                                onClick={() =>
+                                  handlePrintInvoice(selectedInvoice)
+                                }
+                                className="flex-1 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-lg text-sm font-medium flex items-center justify-center"
+                                whileHover={{ scale: 1.02 }}
+                                whileTap={{ scale: 0.98 }}
+                              >
+                                <Printer className="mr-2" size={16} />
+                                Print Invoice
+                              </motion.button>
+                              {selectedInvoice.paymentStatus === "Pending" && (
+                                <motion.button
+                                  onClick={() =>
+                                    handlePaymentStatusUpdate(
+                                      selectedInvoice.invoiceNumber,
+                                      "Paid"
+                                    )
+                                  }
+                                  className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-medium flex items-center justify-center"
+                                  whileHover={{ scale: 1.02 }}
+                                  whileTap={{ scale: 0.98 }}
+                                >
+                                  <Check className="mr-2" size={16} />
+                                  Mark as Paid
+                                </motion.button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
               )}
             </motion.div>
