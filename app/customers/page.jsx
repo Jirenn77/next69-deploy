@@ -2127,7 +2127,8 @@ export default function CustomersPage() {
                         )}
                       </div>
 
-                      <div className="mt-3 space-y-2">
+                      {/* In the Customer Details Panel - Membership Status section */}
+<div className="mt-3 space-y-2">
   {selectedCustomer.membership === "None" ? (
     <motion.button
       onClick={() => handleAddMembershipClick(selectedCustomer)}
@@ -2177,6 +2178,7 @@ export default function CustomersPage() {
     </motion.button>
   )}
 </div>
+                    </div>
 
                     {/* Recent Activity
                     <div>
@@ -2763,30 +2765,23 @@ export default function CustomersPage() {
 
               <div className="space-y-4">
                 <div className="bg-blue-50 p-4 rounded-lg">
-                  <h3 className="font-semibold text-blue-800 mb-2">
-                    Upgrade Details
-                  </h3>
-                  <div className="text-sm text-blue-700 space-y-1">
-                    <p>
-                      <strong>Customer:</strong> {customerForUpgrade.name}
-                    </p>
-                    <p>
-                      <strong>Current:</strong> Basic Membership (₱5,000
-                      coverage)
-                    </p>
-                    <p>
-                      <strong>Upgrade to:</strong> Pro Membership (₱10,000
-                      coverage)
-                    </p>
-                    <p>
-                      <strong>Upgrade Price:</strong> ₱3,000
-                    </p>
-                    <p className="text-xs text-blue-600 mt-2">
-                      💡 Upgrade available within 23 days of registration with
-                      unused balance
-                    </p>
-                  </div>
-                </div>
+  <h3 className="font-semibold text-blue-800 mb-2">
+    Upgrade Details
+  </h3>
+  <div className="text-sm text-blue-700 space-y-1">
+    <p><strong>Customer:</strong> {customerForUpgrade.name}</p>
+    <p><strong>Current:</strong> Basic Membership (₱5,000 coverage)</p>
+    <p><strong>Upgrade to:</strong> Pro Membership (₱10,000 coverage)</p>
+    <p><strong>Upgrade Price:</strong> ₱3,000</p>
+    <p><strong>Days Since Registration:</strong> {customerForUpgrade.membershipDetails ? 
+      Math.floor((new Date() - new Date(customerForUpgrade.membershipDetails.dateRegistered)) / (1000 * 60 * 60 * 24))
+      : 'N/A'} / 23 days
+    </p>
+    <p className="text-xs text-blue-600 mt-2">
+      💡 Upgrade available within 23 days of registration with unused balance
+    </p>
+  </div>
+</div>
 
                 <div>
                   <label className="block text-sm font-medium mb-1">
