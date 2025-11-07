@@ -1817,7 +1817,9 @@ export default function CustomersPage() {
                                   <motion.button
                                     onClick={(e) => {
                                       e.stopPropagation();
+                                      setSelectedCustomer(customer);
                                       handleUpgradeClick(customer);
+                                      setIsUpgradeModalOpen(true);
                                     }}
                                     className="text-purple-600 hover:text-purple-800 p-1 rounded-md hover:bg-purple-100 transition-colors"
                                     whileHover={{ scale: 1.2 }}
