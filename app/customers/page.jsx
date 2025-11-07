@@ -903,9 +903,9 @@ export default function CustomersPage() {
   };
 
   const handleUpgradeClick = (customer) => {
-    setSelectedForMembership(customer);
-    setIsUpgradeModalOpen(true);
-  };
+  setCustomerForUpgrade(customer); // Change this line
+  setIsUpgradeModalOpen(true);
+};
 
   const handleRenewMembershipClick = (customer) => {
     setSelectedForMembership(customer);
@@ -2313,17 +2313,17 @@ export default function CustomersPage() {
     if (upgradeStatus.eligible) {
       return (
         <motion.button
-          onClick={(e) => {
-            e.stopPropagation();
-            setIsUpgradeModalOpen(true);
-            handleUpgradeClick(selectedCustomer);
-          }}
-          className="w-full py-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white rounded-lg text-sm font-medium transition-colors shadow-md"
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-        >
-           Upgrade to Pro Membership
-        </motion.button>
+  onClick={(e) => {
+    e.stopPropagation();
+    setCustomerForUpgrade(selectedCustomer); // Add this line
+    setIsUpgradeModalOpen(true);
+  }}
+  className="w-full py-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white rounded-lg text-sm font-medium transition-colors shadow-md"
+  whileHover={{ scale: 1.02 }}
+  whileTap={{ scale: 0.98 }}
+>
+  Upgrade to Pro Membership
+</motion.button>
       );
     } else {
       return (
