@@ -904,7 +904,7 @@ export default function CustomersPage() {
 
   const handleUpgradeClick = (customer) => {
     setSelectedForMembership(customer);
-    setIsMembershipModalOpen(true);
+    setIsUpgrading(true);
   };
 
   const handleRenewMembershipClick = (customer) => {
