@@ -79,7 +79,7 @@ export default function CustomersPage() {
       !customer.membershipDetails ||
       customer.membership_status?.toLowerCase() !== "basic"
     ) {
-      return false;
+      return { eligible: false, reason: "Not a Basic member" };
     }
 
     const registrationDate = new Date(
@@ -89,11 +89,38 @@ export default function CustomersPage() {
     const daysSinceRegistration = Math.floor(
       (today - registrationDate) / (1000 * 60 * 60 * 24)
     );
+    const daysRemaining = 23 - daysSinceRegistration;
 
     const remainingBalance = customer.membershipDetails.remainingBalance;
     const originalCoverage = customer.membershipDetails.coverage;
 
-    return daysSinceRegistration <= 23 && remainingBalance >= originalCoverage;
+    const isWithin23Days = daysSinceRegistration <= 23;
+    const hasFullBalance = remainingBalance >= originalCoverage;
+
+    if (!isWithin23Days) {
+      return {
+        eligible: false,
+        reason: "Upgrade period expired",
+        daysSinceRegistration,
+        daysRemaining: 0,
+      };
+    }
+
+    if (!hasFullBalance) {
+      return {
+        eligible: false,
+        reason: "Balance already used",
+        daysSinceRegistration,
+        daysRemaining,
+      };
+    }
+
+    return {
+      eligible: true,
+      reason: "Eligible for upgrade",
+      daysSinceRegistration,
+      daysRemaining,
+    };
   };
 
   useEffect(() => {
@@ -872,6 +899,11 @@ export default function CustomersPage() {
     setIsMembershipModalOpen(true);
   };
 
+  const handleUpgradeClick = (customer) => {
+    setSelectedForMembership(customer);
+    setIsMembershipModalOpen(true);
+  };
+
   const handleRenewMembershipClick = (customer) => {
     setSelectedForMembership(customer);
     setIsRenewModalOpen(true);
@@ -1605,10 +1637,11 @@ export default function CustomersPage() {
                             whileHover={{ y: -2, backgroundColor: "#f9fafb" }}
                           >
                             {/* Customer Column */}
+                            {/* Customer Column with Upgrade Indicator */}
                             <td className="px-4 py-3 md:px-6 md:py-4 whitespace-nowrap">
                               <div className="flex items-center">
                                 <div className="ml-3 md:ml-4">
-                                  <div className="text-sm font-medium text-gray-900 flex items-center">
+                                  <div className="text-sm font-medium text-gray-900 flex items-center flex-wrap gap-1">
                                     {customer.name}
                                     {customer.isExpired ? (
                                       <span className="ml-2 bg-gradient-to-r from-red-100 to-red-50 text-red-800 text-xs px-2 py-1 rounded-full border border-red-300 font-semibold shadow-sm">
@@ -1634,6 +1667,32 @@ export default function CustomersPage() {
                                         </span>
                                       )
                                     )}
+
+                                    {/* Upgrade Eligibility Indicator */}
+                                    {(() => {
+                                      const upgradeStatus =
+                                        checkUpgradeEligibility(customer);
+                                      if (upgradeStatus.eligible) {
+                                        return (
+                                          <span className="bg-gradient-to-r from-purple-100 to-pink-100 text-purple-800 text-xs px-2 py-1 rounded-full border border-purple-300 font-semibold shadow-sm animate-pulse">
+                                            ⬆️ Upgrade Available (
+                                            {upgradeStatus.daysRemaining}d left)
+                                          </span>
+                                        );
+                                      } else if (
+                                        upgradeStatus.daysRemaining > 0 &&
+                                        customer.membership_status?.toLowerCase() ===
+                                          "basic"
+                                      ) {
+                                        return (
+                                          <span className="bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded-full border border-gray-300">
+                                            Upgrade in{" "}
+                                            {upgradeStatus.daysRemaining}d
+                                          </span>
+                                        );
+                                      }
+                                      return null;
+                                    })()}
                                   </div>
                                 </div>
                               </div>
@@ -1757,8 +1816,23 @@ export default function CustomersPage() {
                                   >
                                     <RefreshCw size={14} />
                                   </motion.button>
+                                ) : checkUpgradeEligibility(customer)
+                                    .eligible ? (
+                                  // Upgrade for eligible Basic members
+                                  <motion.button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleUpgradeClick(customer);
+                                    }}
+                                    className="text-purple-600 hover:text-purple-800 p-1 rounded-md hover:bg-purple-100 transition-colors"
+                                    whileHover={{ scale: 1.2 }}
+                                    whileTap={{ scale: 0.9 }}
+                                    title="Upgrade to Pro"
+                                  >
+                                    <Activity size={14} />
+                                  </motion.button>
                                 ) : (
-                                  // Renew for active members
+                                  // Renew for active members (not eligible for upgrade)
                                   <motion.button
                                     onClick={(e) => {
                                       e.stopPropagation();
@@ -1774,6 +1848,7 @@ export default function CustomersPage() {
                                     <RefreshCw size={14} />
                                   </motion.button>
                                 )}
+
                                 <motion.button
                                   onClick={(e) => {
                                     e.stopPropagation();
@@ -1786,6 +1861,7 @@ export default function CustomersPage() {
                                 >
                                   <Edit size={14} />
                                 </motion.button>
+
                                 <motion.button
                                   onClick={(e) => {
                                     e.stopPropagation();
@@ -2040,13 +2116,15 @@ export default function CustomersPage() {
                                         "promo"
                                       ? "Promo Member"
                                       : "No Membership")}
-                          </span>
-                          {selectedCustomer.membership !== "None" &&
-                            selectedCustomer.membershipDetails?.expire_date && (
-                              <span
-                                className={`text-xs ${selectedCustomer.isExpired ? "text-red-600 font-medium" : "text-gray-500"}`}
-                              ></span>
+
+                            {/* Upgrade indicator badge */}
+                            {checkUpgradeEligibility(selectedCustomer)
+                              .eligible && (
+                              <span className="ml-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white text-xs px-2 py-1 rounded-full animate-pulse">
+                                Upgrade Available
+                              </span>
                             )}
+                          </span>
                         </div>
 
                         {selectedCustomer.membership !== "None" && (
@@ -2064,16 +2142,77 @@ export default function CustomersPage() {
                               <div>
                                 <div className="text-gray-600">Remaining:</div>
                                 <div
-                                  className={`font-medium ${selectedCustomer.isExpired ? "text-red-700" : "text-green-700"}`}
+                                  className={`font-medium ${
+                                    selectedCustomer.isExpired
+                                      ? "text-red-700"
+                                      : selectedCustomer.membershipDetails
+                                            ?.remainingBalance ===
+                                          selectedCustomer.membershipDetails
+                                            ?.coverage
+                                        ? "text-green-700"
+                                        : "text-blue-700"
+                                  }`}
                                 >
                                   ₱
                                   {Number(
                                     selectedCustomer.membershipDetails
                                       ?.remainingBalance
                                   ).toLocaleString("en-PH")}
+                                  {selectedCustomer.membershipDetails
+                                    ?.remainingBalance ===
+                                    selectedCustomer.membershipDetails
+                                      ?.coverage &&
+                                    selectedCustomer.membership?.toLowerCase() ===
+                                      "basic" && (
+                                      <span className="text-green-600 ml-1">
+                                        ✓ Full
+                                      </span>
+                                    )}
                                 </div>
                               </div>
                             </div>
+
+                            {/* Additional info for Basic members */}
+                            {selectedCustomer.membership?.toLowerCase() ===
+                              "basic" &&
+                              selectedCustomer.membershipDetails
+                                ?.dateRegistered && (
+                                <div className="pt-2 border-t border-gray-200">
+                                  <div className="flex justify-between items-center text-xs">
+                                    <span className="text-gray-600">
+                                      Registered:
+                                    </span>
+                                    <span className="font-medium text-blue-600">
+                                      {new Date(
+                                        selectedCustomer.membershipDetails.dateRegistered
+                                      ).toLocaleDateString()}
+                                    </span>
+                                  </div>
+                                  <div className="flex justify-between items-center text-xs mt-1">
+                                    <span className="text-gray-600">
+                                      Days since registration:
+                                    </span>
+                                    <span
+                                      className={`font-medium ${
+                                        checkUpgradeEligibility(
+                                          selectedCustomer
+                                        ).eligible
+                                          ? "text-green-600"
+                                          : "text-gray-600"
+                                      }`}
+                                    >
+                                      {Math.floor(
+                                        (new Date() -
+                                          new Date(
+                                            selectedCustomer.membershipDetails.dateRegistered
+                                          )) /
+                                          (1000 * 60 * 60 * 24)
+                                      )}{" "}
+                                      / 23 days
+                                    </span>
+                                  </div>
+                                </div>
+                              )}
 
                             {/* Additional info for promo memberships */}
                             {selectedCustomer.membership?.toLowerCase() ===
@@ -2128,56 +2267,104 @@ export default function CustomersPage() {
                       </div>
 
                       {/* In the Customer Details Panel - Membership Status section */}
-<div className="mt-3 space-y-2">
-  {selectedCustomer.membership === "None" ? (
-    <motion.button
-      onClick={() => handleAddMembershipClick(selectedCustomer)}
-      className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
-      whileHover={{ scale: 1.02 }}
-      whileTap={{ scale: 0.98 }}
-    >
-      Add Membership
-    </motion.button>
-  ) : selectedCustomer.isExpired ? (
-    <motion.button
-      onClick={(e) => {
-        e.stopPropagation();
-        setIsRenewModalOpen(true);
-        handleRenewMembershipClick(selectedCustomer);
-      }}
-      className="w-full py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium transition-colors"
-      whileHover={{ scale: 1.02 }}
-      whileTap={{ scale: 0.98 }}
-    >
-      Renew Expired Membership
-    </motion.button>
-  ) : checkUpgradeEligibility(selectedCustomer) ? (
-    <motion.button
-      onClick={(e) => {
-        e.stopPropagation();
-        handleUpgradeClick(selectedCustomer);
-      }}
-      className="w-full py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-medium transition-colors"
-      whileHover={{ scale: 1.02 }}
-      whileTap={{ scale: 0.98 }}
-    >
-      Upgrade to Pro
-    </motion.button>
-  ) : (
-    <motion.button
-      onClick={(e) => {
-        e.stopPropagation();
-        setIsRenewModalOpen(true);
-        handleRenewMembershipClick(selectedCustomer);
-      }}
-      className="w-full py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors"
-      whileHover={{ scale: 1.02 }}
-      whileTap={{ scale: 0.98 }}
-    >
-      Renew Membership
-    </motion.button>
-  )}
-</div>
+                      <div className="mt-3 space-y-2">
+                        {selectedCustomer.membership === "None" ? (
+                          <motion.button
+                            onClick={() =>
+                              handleAddMembershipClick(selectedCustomer)
+                            }
+                            className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                          >
+                            Add Membership
+                          </motion.button>
+                        ) : selectedCustomer.isExpired ? (
+                          <motion.button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setIsRenewModalOpen(true);
+                              handleRenewMembershipClick(selectedCustomer);
+                            }}
+                            className="w-full py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium transition-colors"
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                          >
+                            Renew Expired Membership
+                          </motion.button>
+                        ) : checkUpgradeEligibility(selectedCustomer)
+                            .eligible ? (
+                          // Show Upgrade button for eligible customers instead of Renew
+                          <motion.button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleUpgradeClick(selectedCustomer);
+                            }}
+                            className="w-full py-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white rounded-lg text-sm font-medium transition-colors shadow-md"
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                          >
+                            ⬆️ Upgrade to Pro Membership
+                          </motion.button>
+                        ) : (
+                          // Show Renew for non-eligible active members
+                          <motion.button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setIsRenewModalOpen(true);
+                              handleRenewMembershipClick(selectedCustomer);
+                            }}
+                            className="w-full py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors"
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                          >
+                            Renew Membership
+                          </motion.button>
+                        )}
+
+                        {/* Upgrade Eligibility Info */}
+                        {selectedCustomer.membership_status?.toLowerCase() ===
+                          "basic" &&
+                          !selectedCustomer.isExpired && (
+                            <div className="mt-2 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                              <div className="flex items-center justify-between text-xs">
+                                <span className="text-gray-600 font-medium">
+                                  Upgrade to Pro Status:
+                                </span>
+                                {(() => {
+                                  const upgradeStatus =
+                                    checkUpgradeEligibility(selectedCustomer);
+                                  if (upgradeStatus.eligible) {
+                                    return (
+                                      <span className="text-green-600 font-semibold">
+                                        ✅ Eligible (
+                                        {upgradeStatus.daysRemaining} days
+                                        remaining)
+                                      </span>
+                                    );
+                                  } else if (upgradeStatus.daysRemaining > 0) {
+                                    return (
+                                      <span className="text-amber-600">
+                                        ⏳ {upgradeStatus.daysRemaining} days
+                                        left - {upgradeStatus.reason}
+                                      </span>
+                                    );
+                                  } else {
+                                    return (
+                                      <span className="text-red-600">
+                                        ❌ {upgradeStatus.reason}
+                                      </span>
+                                    );
+                                  }
+                                })()}
+                              </div>
+                              <div className="mt-1 text-xs text-gray-500">
+                                Upgrade available within 23 days with full
+                                balance
+                              </div>
+                            </div>
+                          )}
+                      </div>
                     </div>
 
                     {/* Recent Activity
@@ -2738,97 +2925,139 @@ export default function CustomersPage() {
       </AnimatePresence>
 
       {/* Upgrade Membership Modal */}
-      <AnimatePresence>
-        {isUpgradeModalOpen && customerForUpgrade && (
-          <motion.div
-            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+<AnimatePresence>
+  {isUpgradeModalOpen && customerForUpgrade && (
+    <motion.div
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+    >
+      <motion.div
+        className="bg-white p-6 rounded-lg w-full max-w-md"
+        initial={{ scale: 0.9, y: 20, opacity: 0 }}
+        animate={{ scale: 1, y: 0, opacity: 1 }}
+        exit={{ scale: 0.9, y: 20, opacity: 0 }}
+        transition={{ duration: 0.25 }}
+      >
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-bold">Upgrade to Pro Membership</h2>
+          <button
+            onClick={() => setIsUpgradeModalOpen(false)}
+            className="text-gray-500 hover:text-gray-700"
           >
-            <motion.div
-              className="bg-white p-6 rounded-lg w-full max-w-md"
-              initial={{ scale: 0.9, y: 20, opacity: 0 }}
-              animate={{ scale: 1, y: 0, opacity: 1 }}
-              exit={{ scale: 0.9, y: 20, opacity: 0 }}
-              transition={{ duration: 0.25 }}
-            >
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-bold">Upgrade to Pro Membership</h2>
-                <button
-                  onClick={() => setIsUpgradeModalOpen(false)}
-                  className="text-gray-500 hover:text-gray-700"
-                >
-                  <X size={24} />
-                </button>
-              </div>
+            <X size={24} />
+          </button>
+        </div>
 
-              <div className="space-y-4">
-                <div className="bg-blue-50 p-4 rounded-lg">
-  <h3 className="font-semibold text-blue-800 mb-2">
-    Upgrade Details
-  </h3>
-  <div className="text-sm text-blue-700 space-y-1">
-    <p><strong>Customer:</strong> {customerForUpgrade.name}</p>
-    <p><strong>Current:</strong> Basic Membership (₱5,000 coverage)</p>
-    <p><strong>Upgrade to:</strong> Pro Membership (₱10,000 coverage)</p>
-    <p><strong>Upgrade Price:</strong> ₱3,000</p>
-    <p><strong>Days Since Registration:</strong> {customerForUpgrade.membershipDetails ? 
-      Math.floor((new Date() - new Date(customerForUpgrade.membershipDetails.dateRegistered)) / (1000 * 60 * 60 * 24))
-      : 'N/A'} / 23 days
-    </p>
-    <p className="text-xs text-blue-600 mt-2">
-      💡 Upgrade available within 23 days of registration with unused balance
-    </p>
-  </div>
-</div>
-
+        <div className="space-y-4">
+          <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-4 rounded-lg border border-purple-200">
+            <h3 className="font-semibold text-purple-800 mb-2 flex items-center">
+              🚀 Upgrade Details
+            </h3>
+            <div className="text-sm text-purple-700 space-y-3">
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-medium mb-1">
-                    Payment Method
-                  </label>
-                  <select
-                    value={upgradePaymentMethod}
-                    onChange={(e) => setUpgradePaymentMethod(e.target.value)}
-                    className="w-full p-2 border rounded"
-                  >
-                    <option value="Cash">Cash</option>
-                    <option value="GCash">GCash</option>
-                    <option value="Card">Card</option>
-                    <option value="Other">Other</option>
-                  </select>
+                  <div className="text-xs text-purple-600 font-medium">Customer</div>
+                  <div className="font-semibold truncate">{customerForUpgrade.name}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-purple-600 font-medium">Current Plan</div>
+                  <div className="font-semibold">Basic (₱5,000)</div>
+                </div>
+                <div>
+                  <div className="text-xs text-purple-600 font-medium">New Plan</div>
+                  <div className="font-semibold text-purple-800">Pro (₱10,000)</div>
+                </div>
+                <div>
+                  <div className="text-xs text-purple-600 font-medium">Upgrade Price</div>
+                  <div className="font-semibold text-green-600">₱3,000</div>
                 </div>
               </div>
-
-              <div className="flex justify-end space-x-2 mt-6">
-                <button
-                  onClick={() => setIsUpgradeModalOpen(false)}
-                  className="px-4 py-2 text-gray-600 hover:text-gray-800"
-                  disabled={isUpgrading}
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={() =>
-                    handleUpgradeMembership(
-                      customerForUpgrade.id,
-                      upgradePaymentMethod
-                    )
-                  }
-                  disabled={isUpgrading}
-                  className={`px-4 py-2 rounded-lg ${
-                    isUpgrading
-                      ? "bg-purple-400 cursor-not-allowed"
-                      : "bg-purple-600 hover:bg-purple-700 text-white"
-                  }`}
-                >
-                  {isUpgrading ? "Upgrading..." : "Confirm Upgrade"}
-                </button>
+              
+              {customerForUpgrade.membershipDetails && (
+                <div className="bg-white p-3 rounded border border-purple-100 mt-2">
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-purple-600">Days since registration:</span>
+                    <span className="font-semibold bg-purple-100 px-2 py-1 rounded">
+                      {Math.floor((new Date() - new Date(customerForUpgrade.membershipDetails.dateRegistered)) / (1000 * 60 * 60 * 24))} / 23 days
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center text-xs mt-2">
+                    <span className="text-purple-600">Current balance:</span>
+                    <span className="font-semibold text-green-600 bg-green-50 px-2 py-1 rounded">
+                      ₱{Number(customerForUpgrade.membershipDetails.remainingBalance).toLocaleString("en-PH")} (Full)
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center text-xs mt-2">
+                    <span className="text-purple-600">Status:</span>
+                    <span className="font-semibold text-green-600 bg-green-100 px-2 py-1 rounded">
+                      ✅ Eligible for Upgrade
+                    </span>
+                  </div>
+                </div>
+              )}
+              
+              <div className="flex items-start text-xs text-purple-600 mt-2 p-2 bg-purple-25 rounded">
+                <span className="mr-2">💡</span>
+                <span>You're upgrading within the 23-day window with unused balance - perfect timing!</span>
               </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1 text-gray-700">
+              Payment Method
+            </label>
+            <select
+              value={upgradePaymentMethod}
+              onChange={(e) => setUpgradePaymentMethod(e.target.value)}
+              className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            >
+              <option value="Cash">Cash</option>
+              <option value="GCash">GCash</option>
+              <option value="Card">Card</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+        </div>
+
+        <div className="flex justify-end space-x-3 mt-6">
+          <button
+            onClick={() => setIsUpgradeModalOpen(false)}
+            className="px-4 py-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors"
+            disabled={isUpgrading}
+          >
+            Cancel
+          </button>
+          <button
+            onClick={() =>
+              handleUpgradeMembership(
+                customerForUpgrade.id,
+                upgradePaymentMethod
+              )
+            }
+            disabled={isUpgrading}
+            className={`px-4 py-2 rounded-lg transition-all ${
+              isUpgrading
+                ? "bg-purple-400 cursor-not-allowed text-white"
+                : "bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-md hover:shadow-lg"
+            }`}
+          >
+            {isUpgrading ? (
+              <div className="flex items-center">
+                <RefreshCw className="animate-spin mr-2" size={16} />
+                Upgrading...
+              </div>
+            ) : (
+              "Confirm Upgrade"
+            )}
+          </button>
+        </div>
+      </motion.div>
+    </motion.div>
+  )}
+</AnimatePresence>
 
       {/* Edit Customer Modal */}
       <AnimatePresence>
