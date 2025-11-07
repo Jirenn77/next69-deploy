@@ -1469,122 +1469,97 @@ export default function InvoicesPage() {
                               </div>
                             </div>
 
-                            {/* Totals Section - Fallback version */}
-                            <div className="border-t border-gray-200 pt-4 space-y-3 text-sm">
-                              {(() => {
-                                // Calculate subtotal from services
-                                const subtotal =
-                                  selectedInvoice.services.reduce(
-                                    (sum, service) => {
-                                      const servicePrice =
-                                        typeof service.price === "string"
-                                          ? parseFloat(
-                                              service.price.replace(/[₱,]/g, "")
-                                            )
-                                          : service.price || 0;
-                                      const serviceQuantity =
-                                        service.quantity || 1;
-                                      return (
-                                        sum + servicePrice * serviceQuantity
-                                      );
-                                    },
-                                    0
-                                  );
+                            {/* Totals Section - Fixed version */}
+<div className="border-t border-gray-200 pt-4 space-y-3 text-sm">
+  {(() => {
+    // Calculate subtotal from services - use fixed precision
+    const subtotal = selectedInvoice.services.reduce((sum, service) => {
+      const servicePrice = typeof service.price === "string"
+        ? parseFloat(service.price.replace(/[₱,]/g, ""))
+        : service.price || 0;
+      const serviceQuantity = service.quantity || 1;
+      return sum + (servicePrice * serviceQuantity);
+    }, 0);
 
-                                const totalAmount =
-                                  typeof selectedInvoice.totalAmount ===
-                                  "string"
-                                    ? parseFloat(
-                                        selectedInvoice.totalAmount.replace(
-                                          /[₱,]/g,
-                                          ""
-                                        )
-                                      )
-                                    : selectedInvoice.totalAmount || 0;
+    const totalAmount = typeof selectedInvoice.totalAmount === "string"
+      ? parseFloat(selectedInvoice.totalAmount.replace(/[₱,]/g, ""))
+      : selectedInvoice.totalAmount || 0;
 
-                                const totalDiscount = subtotal - totalAmount;
+    // Fix floating-point precision issues
+    const cleanSubtotal = Math.round(subtotal * 100) / 100;
+    const cleanTotalAmount = Math.round(totalAmount * 100) / 100;
+    
+    // Only show discount if it's significant (more than 0.01)
+    const totalDiscount = Math.round((cleanSubtotal - cleanTotalAmount) * 100) / 100;
+    const showDiscount = totalDiscount > 0.01;
 
-                                // Check if customer might be a member (you can add this to your backend)
-                                const isMember =
-                                  selectedInvoice.isMember ||
-                                  selectedInvoice.name?.includes("Member") ||
-                                  false;
-                                const membershipType =
-                                  selectedInvoice.membershipType || "premium";
+    // Check if customer might be a member
+    const isMember = selectedInvoice.isMember || 
+                    selectedInvoice.name?.includes("Member") || 
+                    false;
+    const membershipType = selectedInvoice.membershipType || "premium";
 
-                                // Estimate membership discount (50% for premium members)
-                                const estimatedMembershipDiscount = isMember
-                                  ? totalDiscount * 0.7
-                                  : 0; // Assume 70% of discount is from membership
+    // Estimate membership discount (50% for premium members)
+    const estimatedMembershipDiscount = isMember && showDiscount 
+      ? Math.round(totalDiscount * 0.7 * 100) / 100 
+      : 0;
 
-                                return (
-                                  <>
-                                    {/* Subtotal */}
-                                    <div className="flex justify-between">
-                                      <span className="text-gray-600">
-                                        Subtotal:
-                                      </span>
-                                      <span className="tabular-nums text-gray-800">
-                                        {formatCurrency(subtotal)}
-                                      </span>
-                                    </div>
+    const showMembershipDiscount = estimatedMembershipDiscount > 0.01;
+    const showOtherDiscounts = showDiscount && (totalDiscount - estimatedMembershipDiscount) > 0.01;
 
-                                    {/* Membership Discount (estimated) */}
-                                    {isMember &&
-                                      estimatedMembershipDiscount > 0 && (
-                                        <div className="flex justify-between text-emerald-600">
-                                          <span>
-                                            Membership Discount (
-                                            {membershipType === "premium"
-                                              ? "50%"
-                                              : "Standard"}
-                                            ):
-                                          </span>
-                                          <span className="tabular-nums">
-                                            -
-                                            {formatCurrency(
-                                              estimatedMembershipDiscount
-                                            )}
-                                          </span>
-                                        </div>
-                                      )}
+    return (
+      <>
+        {/* Subtotal */}
+        <div className="flex justify-between">
+          <span className="text-gray-600">Subtotal:</span>
+          <span className="tabular-nums text-gray-800">
+            {formatCurrency(cleanSubtotal)}
+          </span>
+        </div>
 
-                                    {/* Other Discounts */}
-                                    {totalDiscount > 0 && (
-                                      <div className="flex justify-between text-blue-600">
-                                        <span>Other Discounts:</span>
-                                        <span className="tabular-nums">
-                                          -
-                                          {formatCurrency(
-                                            totalDiscount -
-                                              estimatedMembershipDiscount
-                                          )}
-                                        </span>
-                                      </div>
-                                    )}
+        {/* Membership Discount (estimated) */}
+        {showMembershipDiscount && (
+          <div className="flex justify-between text-emerald-600">
+            <span>
+              Membership Discount (
+              {membershipType === "premium" ? "50%" : "Standard"}):
+            </span>
+            <span className="tabular-nums">
+              -{formatCurrency(estimatedMembershipDiscount)}
+            </span>
+          </div>
+        )}
 
-                                    {/* Total */}
-                                    <div className="border-t pt-3 mt-3">
-                                      <div className="flex justify-between font-bold text-base">
-                                        <span className="text-gray-800">
-                                          TOTAL:
-                                        </span>
-                                        <span className="tabular-nums text-emerald-600">
-                                          {formatCurrency(totalAmount)}
-                                        </span>
-                                      </div>
-                                    </div>
+        {/* Other Discounts - Only show if significant */}
+        {showOtherDiscounts && (
+          <div className="flex justify-between text-blue-600">
+            <span>Other Discounts:</span>
+            <span className="tabular-nums">
+              -{formatCurrency(totalDiscount - estimatedMembershipDiscount)}
+            </span>
+          </div>
+        )}
 
-                                    {/* Membership Badge */}
-                                    {isMember && (
-                                      <div className="mt-2 text-xs text-emerald-600 text-center">
-                                        ✓ Membership benefits applied
-                                      </div>
-                                    )}
-                                  </>
-                                );
-                              })()}
-                            </div>
+        {/* Total */}
+        <div className="border-t pt-3 mt-3">
+          <div className="flex justify-between font-bold text-base">
+            <span className="text-gray-800">TOTAL:</span>
+            <span className="tabular-nums text-emerald-600">
+              {formatCurrency(cleanTotalAmount)}
+            </span>
+          </div>
+        </div>
+
+        {/* Membership Badge */}
+        {isMember && (
+          <div className="mt-2 text-xs text-emerald-600 text-center">
+            ✓ Membership benefits applied
+          </div>
+        )}
+      </>
+    );
+  })()}
+</div>
 
                             <div className="flex space-x-3 pt-2">
                               <motion.button

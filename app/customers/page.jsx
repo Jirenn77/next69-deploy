@@ -69,122 +69,150 @@ export default function CustomersPage() {
   const [membershipLogs, setMembershipLogs] = useState([]);
   const [membershipTemplates, setMembershipTemplates] = useState([]);
   const [currentUser, setCurrentUser] = useState(null);
+  const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
+  const [customerForUpgrade, setCustomerForUpgrade] = useState(null);
+  const [upgradePaymentMethod, setUpgradePaymentMethod] = useState("Cash");
+  const [isUpgrading, setIsUpgrading] = useState(false);
+
+  const checkUpgradeEligibility = (customer) => {
+    if (
+      !customer.membershipDetails ||
+      customer.membership_status?.toLowerCase() !== "basic"
+    ) {
+      return false;
+    }
+
+    const registrationDate = new Date(
+      customer.membershipDetails.dateRegistered
+    );
+    const today = new Date();
+    const daysSinceRegistration = Math.floor(
+      (today - registrationDate) / (1000 * 60 * 60 * 24)
+    );
+
+    const remainingBalance = customer.membershipDetails.remainingBalance;
+    const originalCoverage = customer.membershipDetails.coverage;
+
+    return daysSinceRegistration <= 23 && remainingBalance >= originalCoverage;
+  };
 
   useEffect(() => {
-  const fetchCurrentUser = async () => {
-    try {
-      let finalUserData = null;
+    const fetchCurrentUser = async () => {
+      try {
+        let finalUserData = null;
 
-      console.log("=== Starting user fetch ===");
+        console.log("=== Starting user fetch ===");
 
-      // First, try to fetch as regular user
-      const currentUserResponse = await fetch(
-        "https://api.lizlyskincare.sbs/branches.php?action=user",
-        {
-          credentials: "include",
-        }
-      );
-
-      console.log("User endpoint status:", currentUserResponse.status);
-
-      if (currentUserResponse.ok) {
-        const currentUserData = await currentUserResponse.json();
-        console.log("User endpoint response:", currentUserData);
-        
-        if (!currentUserData.error) {
-          console.log("✅ User data found via user endpoint");
-          finalUserData = currentUserData;
-        } else {
-          console.log("❌ User endpoint returned error:", currentUserData.error);
-        }
-      }
-
-      // Always try admin endpoint if we didn't get valid data from user endpoint
-      if (!finalUserData) {
-        console.log("🔄 Trying admin endpoint...");
-        const adminResponse = await fetch(
-          "https://api.lizlyskincare.sbs/branches.php?action=admin",
+        // First, try to fetch as regular user
+        const currentUserResponse = await fetch(
+          "https://api.lizlyskincare.sbs/branches.php?action=user",
           {
             credentials: "include",
           }
         );
 
-        console.log("Admin endpoint status:", adminResponse.status);
+        console.log("User endpoint status:", currentUserResponse.status);
 
-        if (adminResponse.ok) {
-          const adminData = await adminResponse.json();
-          console.log("Admin endpoint response:", adminData);
-          
-          if (!adminData.error) {
-            console.log("✅ Admin data found via admin endpoint");
-            finalUserData = adminData;
+        if (currentUserResponse.ok) {
+          const currentUserData = await currentUserResponse.json();
+          console.log("User endpoint response:", currentUserData);
+
+          if (!currentUserData.error) {
+            console.log("✅ User data found via user endpoint");
+            finalUserData = currentUserData;
           } else {
-            console.log("❌ Admin endpoint returned error:", adminData.error);
+            console.log(
+              "❌ User endpoint returned error:",
+              currentUserData.error
+            );
           }
         }
+
+        // Always try admin endpoint if we didn't get valid data from user endpoint
+        if (!finalUserData) {
+          console.log("🔄 Trying admin endpoint...");
+          const adminResponse = await fetch(
+            "https://api.lizlyskincare.sbs/branches.php?action=admin",
+            {
+              credentials: "include",
+            }
+          );
+
+          console.log("Admin endpoint status:", adminResponse.status);
+
+          if (adminResponse.ok) {
+            const adminData = await adminResponse.json();
+            console.log("Admin endpoint response:", adminData);
+
+            if (!adminData.error) {
+              console.log("✅ Admin data found via admin endpoint");
+              finalUserData = adminData;
+            } else {
+              console.log("❌ Admin endpoint returned error:", adminData.error);
+            }
+          }
+        }
+
+        console.log("=== Final decision ===");
+        console.log("Final user data to set:", finalUserData);
+
+        if (finalUserData) {
+          setCurrentUser(finalUserData);
+          localStorage.setItem("user", JSON.stringify(finalUserData));
+          console.log("🎯 User data successfully set");
+        } else {
+          console.log("⚠️ No user data available from API endpoints");
+        }
+      } catch (error) {
+        console.error("Error fetching user data:", error);
       }
+    };
 
-      console.log("=== Final decision ===");
-      console.log("Final user data to set:", finalUserData);
-
-      if (finalUserData) {
-        setCurrentUser(finalUserData);
-        localStorage.setItem("user", JSON.stringify(finalUserData));
-        console.log("🎯 User data successfully set");
-      } else {
-        console.log("⚠️ No user data available from API endpoints");
-      }
-
-    } catch (error) {
-      console.error("Error fetching user data:", error);
-    }
-  };
-
-  fetchCurrentUser();
-}, []);
+    fetchCurrentUser();
+  }, []);
 
   // Helper function to check if customer should show new member badge
   // Helper function to check if customer should show new member badge
-const shouldShowNewMemberBadge = (customer) => {
-  try {
-    const stored = localStorage.getItem(`newMember:${customer.id}`);
-    if (!stored) return false;
+  const shouldShowNewMemberBadge = (customer) => {
+    try {
+      const stored = localStorage.getItem(`newMember:${customer.id}`);
+      if (!stored) return false;
 
-    const parsed = JSON.parse(stored);
-    const storedMembershipId = parsed?.membershipId;
-    const currentMembershipId = customer.membership_id;
+      const parsed = JSON.parse(stored);
+      const storedMembershipId = parsed?.membershipId;
+      const currentMembershipId = customer.membership_id;
 
-    // Only remove the badge if membership has been renewed (different membership ID)
-    if (
-      storedMembershipId &&
-      currentMembershipId &&
-      storedMembershipId !== currentMembershipId &&
-      currentMembershipId !== null &&
-      currentMembershipId !== undefined
-    ) {
-      // Membership renewed - remove flag and don't show badge
-      localStorage.removeItem(`newMember:${customer.id}`);
+      // Only remove the badge if membership has been renewed (different membership ID)
+      if (
+        storedMembershipId &&
+        currentMembershipId &&
+        storedMembershipId !== currentMembershipId &&
+        currentMembershipId !== null &&
+        currentMembershipId !== undefined
+      ) {
+        // Membership renewed - remove flag and don't show badge
+        localStorage.removeItem(`newMember:${customer.id}`);
+        return false;
+      }
+
+      // Show badge if flag exists and hasn't been renewed
+      return true;
+    } catch (_) {
       return false;
     }
-
-    // Show badge if flag exists and hasn't been renewed
-    return true;
-  } catch (_) {
-    return false;
-  }
-};
+  };
 
   // Membership-related states
   const [isMembershipModalOpen, setIsMembershipModalOpen] = useState(false);
   const [selectedForMembership, setSelectedForMembership] = useState(null);
   const [membershipForm, setMembershipForm] = useState({
-  type: "basic",
-  templateId: "basic", // Use IDs instead of type
-  name: "Basic",
-  fee: 3000,
-  consumable: 5000,
-  paymentMethod: "Cash",
-});
+    type: "basic",
+    templateId: "basic", // Use IDs instead of type
+    name: "Basic",
+    fee: 3000,
+    consumable: 5000,
+    paymentMethod: "Cash",
+  });
 
   const [newCustomer, setNewCustomer] = useState({
     name: "",
@@ -207,7 +235,9 @@ const shouldShowNewMemberBadge = (customer) => {
   useEffect(() => {
     const fetchMembershipTemplates = async () => {
       try {
-        const res = await fetch("https://api.lizlyskincare.sbs/memberships.php");
+        const res = await fetch(
+          "https://api.lizlyskincare.sbs/memberships.php"
+        );
         const data = await res.json();
         setMembershipTemplates(data);
       } catch (error) {
@@ -223,101 +253,115 @@ const shouldShowNewMemberBadge = (customer) => {
   }, [activeTab]);
 
   const fetchCustomers = async (filter = "all") => {
-  try {
-    setIsLoading(true);
-    const response = await fetch(
-      `https://api.lizlyskincare.sbs/customers.php?filter=${filter}`
-    );
-    if (!response.ok) throw new Error("Failed to fetch customers");
-    const data = await response.json();
+    try {
+      setIsLoading(true);
+      const response = await fetch(
+        `https://api.lizlyskincare.sbs/customers.php?filter=${filter}`
+      );
+      if (!response.ok) throw new Error("Failed to fetch customers");
+      const data = await response.json();
 
-    // Decorate with persisted "new member" flags and check for expired memberships
-    const decorated = Array.isArray(data)
-      ? data.map((c) => {
-          const shouldShowBadge = shouldShowNewMemberBadge(c);
-          
-          // Check if membership is expired
-          let isExpired = false;
-          if (c.membershipDetails?.expire_date || c.membershipDetails?.expireDate) {
-            const expireDate = new Date(c.membershipDetails.expire_date || c.membershipDetails.expireDate);
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            expireDate.setHours(0, 0, 0, 0);
-            isExpired = expireDate < today;
-          }
+      // Decorate with persisted "new member" flags and check for expired memberships
+      const decorated = Array.isArray(data)
+        ? data.map((c) => {
+            const shouldShowBadge = shouldShowNewMemberBadge(c);
 
-          if (!shouldShowBadge && !isExpired) return { ...c, isExpired };
+            // Check if membership is expired
+            let isExpired = false;
+            if (
+              c.membershipDetails?.expire_date ||
+              c.membershipDetails?.expireDate
+            ) {
+              const expireDate = new Date(
+                c.membershipDetails.expire_date ||
+                  c.membershipDetails.expireDate
+              );
+              const today = new Date();
+              today.setHours(0, 0, 0, 0);
+              expireDate.setHours(0, 0, 0, 0);
+              isExpired = expireDate < today;
+            }
 
-          try {
-            const stored = localStorage.getItem(`newMember:${c.id}`);
-            const parsed = JSON.parse(stored);
+            if (!shouldShowBadge && !isExpired) return { ...c, isExpired };
 
-            return {
-              ...c,
-              isNewMember: shouldShowBadge,
-              isExpired: isExpired,
-              newMemberType: shouldShowBadge
-                ? parsed?.type ||
-                  (c.membership_status
-                    ? String(c.membership_status).toLowerCase()
-                    : undefined)
-                : undefined,
-            };
-          } catch (_) {
-            return { ...c, isExpired };
-          }
-        })
-      : data;
+            try {
+              const stored = localStorage.getItem(`newMember:${c.id}`);
+              const parsed = JSON.parse(stored);
 
-    setCustomers(decorated);
-  } catch (error) {
-    console.error(error);
-  } finally {
-    setIsLoading(false);
-  }
-};
+              return {
+                ...c,
+                isNewMember: shouldShowBadge,
+                isExpired: isExpired,
+                newMemberType: shouldShowBadge
+                  ? parsed?.type ||
+                    (c.membership_status
+                      ? String(c.membership_status).toLowerCase()
+                      : undefined)
+                  : undefined,
+              };
+            } catch (_) {
+              return { ...c, isExpired };
+            }
+          })
+        : data;
+
+      setCustomers(decorated);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const fetchCustomerDetails = async (customerId) => {
-  setIsLoadingDetails(true);
-  try {
-    const res = await fetch(
-      `https://api.lizlyskincare.sbs/customers.php?customerId=${customerId}`
-    );
-    const data = await res.json();
+    setIsLoadingDetails(true);
+    try {
+      const res = await fetch(
+        `https://api.lizlyskincare.sbs/customers.php?customerId=${customerId}`
+      );
+      const data = await res.json();
 
-    // Calculate isExpired for the individual customer
-    let isExpired = false;
-    if (data.membershipDetails?.expire_date || data.membershipDetails?.expireDate) {
-      const expireDate = new Date(data.membershipDetails.expire_date || data.membershipDetails.expireDate);
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      expireDate.setHours(0, 0, 0, 0);
-      isExpired = expireDate < today;
+      // Calculate isExpired for the individual customer
+      let isExpired = false;
+      if (
+        data.membershipDetails?.expire_date ||
+        data.membershipDetails?.expireDate
+      ) {
+        const expireDate = new Date(
+          data.membershipDetails.expire_date ||
+            data.membershipDetails.expireDate
+        );
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        expireDate.setHours(0, 0, 0, 0);
+        isExpired = expireDate < today;
+      }
+
+      // Make sure to include all expected properties in the result
+      setSelectedCustomer({
+        id: data.id,
+        name: data.name,
+        contact: data.contact,
+        email: data.email,
+        address: data.address,
+        birthday: data.birthday,
+        customerId: data.customerId,
+        membership: data.membership || "None",
+        membershipDetails: data.membershipDetails || null,
+        transactions: data.transactions || [],
+        isExpired: isExpired, // Add the calculated isExpired property
+        // Also preserve any existing new member flags from the local state
+        isNewMember:
+          customers.find((c) => c.id === customerId)?.isNewMember || false,
+        newMemberType: customers.find((c) => c.id === customerId)
+          ?.newMemberType,
+      });
+    } catch (error) {
+      console.error("Error fetching customer details:", error);
+    } finally {
+      setIsLoadingDetails(false);
     }
-
-    // Make sure to include all expected properties in the result
-    setSelectedCustomer({
-      id: data.id,
-      name: data.name,
-      contact: data.contact,
-      email: data.email,
-      address: data.address,
-      birthday: data.birthday,
-      customerId: data.customerId,
-      membership: data.membership || "None",
-      membershipDetails: data.membershipDetails || null,
-      transactions: data.transactions || [],
-      isExpired: isExpired, // Add the calculated isExpired property
-      // Also preserve any existing new member flags from the local state
-      isNewMember: customers.find(c => c.id === customerId)?.isNewMember || false,
-      newMemberType: customers.find(c => c.id === customerId)?.newMemberType,
-    });
-  } catch (error) {
-    console.error("Error fetching customer details:", error);
-  } finally {
-    setIsLoadingDetails(false);
-  }
-};
+  };
 
   const fetchMembershipLogs = async (filter = "all") => {
     setLogsLoading(true);
@@ -344,378 +388,476 @@ const shouldShowNewMemberBadge = (customer) => {
   });
 
   const handleRenewMembership = async (
-  customerId,
-  type,
-  payment,
-  renewMembership
-) => {
-  try {
-    console.log("Renewing membership with:", {
-      customerId,
-      type,
-      payment,
-      renewMembership,
-    });
-
-    const { price, consumable_amount, valid_until, no_expiration } =
-      renewMembership;
-
-    // Fetch the latest membership
-    let currentMembership = null;
+    customerId,
+    type,
+    payment,
+    renewMembership
+  ) => {
     try {
-      const response = await fetch(
-        `https://api.lizlyskincare.sbs/members.php?customer_id=${customerId}`
-      );
-      const memberships = await response.json();
+      console.log("Renewing membership with:", {
+        customerId,
+        type,
+        payment,
+        renewMembership,
+      });
 
-      if (memberships && memberships.length > 0) {
-        currentMembership = memberships.sort(
-          (a, b) => new Date(b.date_registered) - new Date(a.date_registered)
-        )[0];
+      const { price, consumable_amount, valid_until, no_expiration } =
+        renewMembership;
+
+      // Fetch the latest membership
+      let currentMembership = null;
+      try {
+        const response = await fetch(
+          `https://api.lizlyskincare.sbs/members.php?customer_id=${customerId}`
+        );
+        const memberships = await response.json();
+
+        if (memberships && memberships.length > 0) {
+          currentMembership = memberships.sort(
+            (a, b) => new Date(b.date_registered) - new Date(a.date_registered)
+          )[0];
+        }
+      } catch (fetchError) {
+        console.warn("Could not fetch membership from API:", fetchError);
+        const customerMembershipHistory = customerMemberships
+          .filter((m) => m.customer_id === customerId)
+          .sort(
+            (a, b) =>
+              new Date(b.date_registered).getTime() -
+              new Date(a.date_registered).getTime()
+          );
+
+        currentMembership = customerMembershipHistory[0];
       }
-    } catch (fetchError) {
-      console.warn("Could not fetch membership from API:", fetchError);
-      const customerMembershipHistory = customerMemberships
-        .filter((m) => m.customer_id === customerId)
-        .sort(
-          (a, b) =>
-            new Date(b.date_registered).getTime() -
-            new Date(a.date_registered).getTime()
+
+      // If no current membership, create instead of renew
+      if (!currentMembership) {
+        const confirmCreate = window.confirm(
+          "No existing membership found. Would you like to create a new membership instead of renewing?"
         );
 
-      currentMembership = customerMembershipHistory[0];
-    }
+        if (confirmCreate) {
+          let coverage = 0;
+          let price = 0;
+          let expireDate = null;
 
-    // If no current membership, create instead of renew
-    if (!currentMembership) {
-      const confirmCreate = window.confirm(
-        "No existing membership found. Would you like to create a new membership instead of renewing?"
-      );
+          if (type === "basic") {
+            coverage = 5000;
+            price = 5000;
+          } else if (type === "pro") {
+            coverage = 10000;
+            price = 10000;
+          } else if (
+            type === "promo" ||
+            membershipTemplates.find(
+              (m) => m.id.toString() === type && m.type === "promo"
+            )
+          ) {
+            const selectedTemplate = membershipTemplates.find(
+              (m) => m.id.toString() === type
+            );
+            coverage = parseFloat(
+              consumable_amount || selectedTemplate?.consumable_amount || 0
+            );
+            price = parseFloat(price || selectedTemplate?.price || 0);
+          }
 
-      if (confirmCreate) {
-        let coverage = 0;
-        let price = 0;
-        let expireDate = null;
+          const isPromoType =
+            type === "promo" ||
+            membershipTemplates.find(
+              (m) => m.id.toString() === type && m.type === "promo"
+            );
 
-        if (type === "basic") {
-          coverage = 5000;
-          price = 5000;
-        } else if (type === "pro") {
-          coverage = 10000;
-          price = 10000;
-        } else if (type === "promo" || membershipTemplates.find(m => m.id.toString() === type && m.type === "promo")) {
-          const selectedTemplate = membershipTemplates.find(m => m.id.toString() === type);
-          coverage = parseFloat(consumable_amount || (selectedTemplate?.consumable_amount || 0));
-          price = parseFloat(price || (selectedTemplate?.price || 0));
-        }
+          if (!expireDate && !isPromoType) {
+            const today = new Date();
+            today.setMonth(today.getMonth() + (type === "pro" ? 2 : 1));
+            expireDate = today.toISOString().split("T")[0];
+          }
 
-        const isPromoType = type === "promo" || membershipTemplates.find(m => m.id.toString() === type && m.type === "promo");
-        
-        if (!expireDate && !isPromoType) {
-          const today = new Date();
-          today.setMonth(today.getMonth() + (type === "pro" ? 2 : 1));
-          expireDate = today.toISOString().split("T")[0];
-        }
+          // Use consistent user ID and branch ID fields
+          const userId = currentUser?.id || currentUser?.user_id || null;
+          const branchId = currentUser?.branch_id || null;
+          const userName = currentUser?.name || "Unknown User";
 
-        // Use consistent user ID and branch ID fields
-        const userId = currentUser?.id || currentUser?.user_id || null;
-        const branchId = currentUser?.branch_id || null;
-        const userName = currentUser?.name || "Unknown User";
+          const payload = {
+            customer_id: customerId,
+            action: "renew",
+            type,
+            coverage,
+            price,
+            expire_date: expireDate,
+            payment_method: payment,
+            branch_id: branchId,
+            performed_by: userId,
+            performed_by_name: userName,
+          };
 
-        const payload = {
-          customer_id: customerId,
-          action: "renew",
-          type,
-          coverage,
-          price,
-          expire_date: expireDate,
-          payment_method: payment,
-          branch_id: branchId,
-          performed_by: userId,
-          performed_by_name: userName,
-        };
+          const response = await fetch(
+            "https://api.lizlyskincare.sbs/members.php",
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(payload),
+            }
+          );
 
-        const response = await fetch("https://api.lizlyskincare.sbs/members.php", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
+          const data = await response.json();
+          if (data.error) {
+            toast.error(`❌ ${data.error}`);
+            return;
+          }
 
-        const data = await response.json();
-        if (data.error) {
-          toast.error(`❌ ${data.error}`);
+          setCustomerMemberships((prev) => [...prev, data]);
+          toast.success("✅ New membership created successfully!");
+          return;
+        } else {
           return;
         }
+      }
 
-        setCustomerMemberships((prev) => [...prev, data]);
-        toast.success("✅ New membership created successfully!");
-        return;
-      } else {
+      // ✅ Proceed with renewal setup (no balance check anymore)
+      let coverage = 0;
+      let expireDate = null;
+
+      const isPromoType =
+        type === "promo" ||
+        membershipTemplates.find(
+          (m) => m.id.toString() === type && m.type === "promo"
+        );
+
+      if (type === "basic") {
+        coverage = 5000;
+      } else if (type === "pro") {
+        coverage = 10000;
+      } else if (isPromoType) {
+        const selectedTemplate = membershipTemplates.find(
+          (m) => m.id.toString() === type
+        );
+        coverage = parseFloat(
+          consumable_amount || selectedTemplate?.consumable_amount || 0
+        );
+        if (!no_expiration && valid_until) {
+          expireDate = valid_until;
+        }
+      }
+
+      if (!isPromoType) {
+        const today = new Date();
+        today.setMonth(today.getMonth() + (type === "pro" ? 2 : 1));
+        expireDate = today.toISOString().split("T")[0];
+      }
+
+      const membershipId = currentMembership.id;
+      if (!membershipId) {
+        toast.error("❌ Cannot determine membership ID for renewal");
+        console.error("Current membership object:", currentMembership);
         return;
       }
-    }
 
-    // ✅ Proceed with renewal setup (no balance check anymore)
-    let coverage = 0;
-    let expireDate = null;
+      // Use consistent user ID and branch ID fields
+      const userId = currentUser?.id || currentUser?.user_id || null;
+      const branchId = currentUser?.branch_id || null;
+      const userName = currentUser?.name || "Unknown User";
 
-    const isPromoType = type === "promo" || membershipTemplates.find(m => m.id.toString() === type && m.type === "promo");
+      // Determine the actual type from template if template ID was selected
+      const actualType = isPromoType ? "promo" : type;
 
-    if (type === "basic") {
-      coverage = 5000;
-    } else if (type === "pro") {
-      coverage = 10000;
-    } else if (isPromoType) {
-      const selectedTemplate = membershipTemplates.find(m => m.id.toString() === type);
-      coverage = parseFloat(consumable_amount || (selectedTemplate?.consumable_amount || 0));
-      if (!no_expiration && valid_until) {
-        expireDate = valid_until;
-      }
-    }
-
-    if (!isPromoType) {
-      const today = new Date();
-      today.setMonth(today.getMonth() + (type === "pro" ? 2 : 1));
-      expireDate = today.toISOString().split("T")[0];
-    }
-
-    const membershipId = currentMembership.id;
-    if (!membershipId) {
-      toast.error("❌ Cannot determine membership ID for renewal");
-      console.error("Current membership object:", currentMembership);
-      return;
-    }
-
-    // Use consistent user ID and branch ID fields
-    const userId = currentUser?.id || currentUser?.user_id || null;
-    const branchId = currentUser?.branch_id || null;
-    const userName = currentUser?.name || "Unknown User";
-
-    // Determine the actual type from template if template ID was selected
-    const actualType = isPromoType ? "promo" : type;
-
-    const payload = {
-      customer_id: customerId,
-      membership_id: membershipId,
-      action: "renew",
-      type: actualType,
-      coverage, // new coverage to add
-      price: parseFloat(price || 0),
-      expire_date: expireDate,
-      payment_method: payment,
-      branch_id: branchId,
-      performed_by: userId,
-      performed_by_name: userName,
-    };
-
-    console.log("Sending renewal payload:", payload);
-
-    const response = await fetch("https://api.lizlyskincare.sbs/members.php", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-
-    const data = await response.json();
-    if (data.error) {
-      toast.error(`❌ ${data.error}`);
-      return;
-    }
-
-    const newMembership = data;
-
-    await fetch("https://api.lizlyskincare.sbs/membership_logs.php", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
+      const payload = {
         customer_id: customerId,
-        membership_id: newMembership.id,
-        action: "renewal",
-        type,
-        amount: coverage,
+        membership_id: membershipId,
+        action: "renew",
+        type: actualType,
+        coverage, // new coverage to add
+        price: parseFloat(price || 0),
+        expire_date: expireDate,
         payment_method: payment,
-        // Use consistent user tracking fields
         branch_id: branchId,
         performed_by: userId,
         performed_by_name: userName,
-      }),
-    });
+      };
 
-    setCustomerMemberships((prev) => [...prev, newMembership]);
+      console.log("Sending renewal payload:", payload);
 
-    // ✅ Clear badge FIRST before updating state
-    try {
-      localStorage.removeItem(`newMember:${customerId}`);
-    } catch (_) {
-      // ignore
-    }
-
-    // Update customers list to remove badge
-    setCustomers((prev) =>
-      prev.map((c) =>
-        c.id === customerId
-          ? {
-              ...c,
-              isNewMember: false,
-              newMemberType: undefined,
-              membership_id: newMembership.id, // ✅ Update with NEW membership ID
-            }
-          : c
-      )
-    );
-
-    fetchMembershipLogs(customerId);
-    toast.success("✅ Membership renewed successfully!");
-
-    // Refresh the customer list to update badges
-    setTimeout(() => {
-      refreshCustomerList();
-    }, 500);
-  } catch (error) {
-    toast.error("❌ Failed to renew membership.");
-    console.error("Renewal error:", error);
-  }
-};
-
-  const handleSaveMembership = async () => {
-  const customer = selectedForMembership;
-
-  try {
-    let userData = currentUser;
-
-    // If currentUser is not available, try to fetch it
-    if (!userData) {
-      try {
-        const currentUserResponse = await fetch(
-          "https://api.lizlyskincare.sbs/branches.php?action=user",
-          {
-            credentials: "include",
-          }
-        );
-
-        if (currentUserResponse.ok) {
-          userData = await currentUserResponse.json();
-          console.log("Fetched user data in handleSaveMembership:", userData);
+      const response = await fetch(
+        "https://api.lizlyskincare.sbs/members.php",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
         }
-      } catch (userError) {
-        console.error("Error fetching user data:", userError);
-      }
-    }
-
-    // Also try localStorage as fallback
-    if (!userData) {
-      const storedUser = localStorage.getItem("user");
-      if (storedUser) {
-        try {
-          userData = JSON.parse(storedUser);
-          console.log("User data from localStorage:", userData);
-        } catch (parseError) {
-          console.error(
-            "Error parsing user data from localStorage:",
-            parseError
-          );
-        }
-      }
-    }
-
-    // Use consistent user ID and branch ID fields
-    const userId = userData?.id || userData?.user_id || null;
-    const branchId = userData?.branch_id || null;
-    const userName = userData?.name || "Unknown User";
-
-    const body = {
-      customer_id: customer.id,
-      action: "New Member",
-      type: membershipForm.type.toLowerCase(),
-        template_id: membershipForm.templateId,
-      coverage: parseFloat(membershipForm.consumable),
-      remaining_balance: parseFloat(membershipForm.consumable),
-      payment_method: membershipForm.paymentMethod || "cash",
-      note: membershipForm.description || "",
-      duration: 1,
-      branch_id: branchId,
-      performed_by: userId,
-      performed_by_name: userName,
-    };
-
-    console.log("Sending membership data:", body); // Debug log
-
-    if (
-      membershipForm.type === "promo" &&
-      !membershipForm.noExpiration &&
-      membershipForm.validTo
-    ) {
-      body.duration = calculateDuration(membershipForm.validTo);
-    }
-
-    const response = await fetch("https://api.lizlyskincare.sbs/members.php", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(body),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || "Failed to add membership");
-    }
-
-    const data = await response.json();
-    console.log("Membership API response:", data);
-
-    if (data && data.id) {
-      const updatedCustomers = customers.map((c) =>
-        c.id === customer.id
-          ? {
-              ...c,
-              membership_status: data.type.toUpperCase(),
-              membership_id: data.id, // Store the membership ID
-              membershipDetails: {
-                type: data.type,
-                coverage: data.coverage,
-                remainingBalance: data.remaining_balance,
-                dateRegistered: data.date_registered,
-                expireDate: data.expire_date,
-              },
-              isNewMember: true,
-              newMemberType: data.type,
-            }
-          : c
       );
 
-      setCustomers(updatedCustomers);
-      setIsMembershipModalOpen(false);
-      setSelectedCustomer(updatedCustomers.find((c) => c.id === customer.id));
+      const data = await response.json();
+      if (data.error) {
+        toast.error(`❌ ${data.error}`);
+        return;
+      }
 
-      // Store the new member flag with membership ID (no expiration)
+      const newMembership = data;
+
+      await fetch("https://api.lizlyskincare.sbs/membership_logs.php", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          customer_id: customerId,
+          membership_id: newMembership.id,
+          action: "renewal",
+          type,
+          amount: coverage,
+          payment_method: payment,
+          // Use consistent user tracking fields
+          branch_id: branchId,
+          performed_by: userId,
+          performed_by_name: userName,
+        }),
+      });
+
+      setCustomerMemberships((prev) => [...prev, newMembership]);
+
+      // ✅ Clear badge FIRST before updating state
       try {
-        localStorage.setItem(
-          `newMember:${customer.id}`,
-          JSON.stringify({
-            type: data.type,
-            membershipId: data.id, // ✅ Store the membership ID
-            createdAt: new Date().toISOString(),
-          })
-        );
+        localStorage.removeItem(`newMember:${customerId}`);
+      } catch (_) {
+        // ignore
+      }
+
+      // Update customers list to remove badge
+      setCustomers((prev) =>
+        prev.map((c) =>
+          c.id === customerId
+            ? {
+                ...c,
+                isNewMember: false,
+                newMemberType: undefined,
+                membership_id: newMembership.id, // ✅ Update with NEW membership ID
+              }
+            : c
+        )
+      );
+
+      fetchMembershipLogs(customerId);
+      toast.success("✅ Membership renewed successfully!");
+
+      // Refresh the customer list to update badges
+      setTimeout(() => {
+        refreshCustomerList();
+      }, 500);
+    } catch (error) {
+      toast.error("❌ Failed to renew membership.");
+      console.error("Renewal error:", error);
+    }
+  };
+
+  // Update the handleUpgradeMembership function
+  const handleUpgradeMembership = async (customerId, paymentMethod) => {
+    try {
+      setIsUpgrading(true);
+
+      // Get the current membership ID
+      const customer = customerForUpgrade || selectedCustomer;
+      const membershipId =
+        customer.membership_id || customer.membershipDetails?.id;
+
+      if (!membershipId) {
+        throw new Error("Cannot find membership ID for upgrade");
+      }
+
+      const userId = currentUser?.id || currentUser?.user_id || null;
+      const branchId = currentUser?.branch_id || null;
+      const userName = currentUser?.name || "Unknown User";
+
+      const response = await fetch(
+        "https://api.lizlyskincare.sbs/members.php",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            customer_id: customerId,
+            membership_id: membershipId,
+            action: "upgrade",
+            type: "pro",
+            payment_method: paymentMethod,
+            branch_id: branchId,
+            performed_by: userId,
+            performed_by_name: userName,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (data.error) {
+        throw new Error(data.error);
+      }
+
+      toast.success("✅ Membership upgraded to Pro successfully!");
+
+      // Clear new member badge if it exists
+      try {
+        localStorage.removeItem(`newMember:${customerId}`);
       } catch (_) {
         // ignore storage errors
       }
 
-      toast.success("Membership added successfully");
+      // Refresh customer data
+      if (selectedCustomer?.id === customerId) {
+        fetchCustomerDetails(customerId);
+      }
 
-      // Refresh the customer list to show new badges
-      setTimeout(() => {
-        refreshCustomerList();
-      }, 500);
-    } else {
-      throw new Error("Invalid response from server");
+      // Refresh the customers list
+      fetchCustomers(activeTab);
+
+      setIsUpgradeModalOpen(false);
+    } catch (error) {
+      console.error("Upgrade error:", error);
+      toast.error(`❌ ${error.message}`);
+    } finally {
+      setIsUpgrading(false);
     }
-  } catch (error) {
-    console.error("Error adding membership:", error);
-    toast.error(error.message || "Error connecting to server");
-  }
-};
+  };
+
+  const handleSaveMembership = async () => {
+    const customer = selectedForMembership;
+
+    try {
+      let userData = currentUser;
+
+      // If currentUser is not available, try to fetch it
+      if (!userData) {
+        try {
+          const currentUserResponse = await fetch(
+            "https://api.lizlyskincare.sbs/branches.php?action=user",
+            {
+              credentials: "include",
+            }
+          );
+
+          if (currentUserResponse.ok) {
+            userData = await currentUserResponse.json();
+            console.log("Fetched user data in handleSaveMembership:", userData);
+          }
+        } catch (userError) {
+          console.error("Error fetching user data:", userError);
+        }
+      }
+
+      // Also try localStorage as fallback
+      if (!userData) {
+        const storedUser = localStorage.getItem("user");
+        if (storedUser) {
+          try {
+            userData = JSON.parse(storedUser);
+            console.log("User data from localStorage:", userData);
+          } catch (parseError) {
+            console.error(
+              "Error parsing user data from localStorage:",
+              parseError
+            );
+          }
+        }
+      }
+
+      // Use consistent user ID and branch ID fields
+      const userId = userData?.id || userData?.user_id || null;
+      const branchId = userData?.branch_id || null;
+      const userName = userData?.name || "Unknown User";
+
+      const body = {
+        customer_id: customer.id,
+        action: "New Member",
+        type: membershipForm.type.toLowerCase(),
+        template_id: membershipForm.templateId,
+        coverage: parseFloat(membershipForm.consumable),
+        remaining_balance: parseFloat(membershipForm.consumable),
+        payment_method: membershipForm.paymentMethod || "cash",
+        note: membershipForm.description || "",
+        duration: 1,
+        branch_id: branchId,
+        performed_by: userId,
+        performed_by_name: userName,
+      };
+
+      console.log("Sending membership data:", body); // Debug log
+
+      if (
+        membershipForm.type === "promo" &&
+        !membershipForm.noExpiration &&
+        membershipForm.validTo
+      ) {
+        body.duration = calculateDuration(membershipForm.validTo);
+      }
+
+      const response = await fetch(
+        "https://api.lizlyskincare.sbs/members.php",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(body),
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to add membership");
+      }
+
+      const data = await response.json();
+      console.log("Membership API response:", data);
+
+      if (data && data.id) {
+        const updatedCustomers = customers.map((c) =>
+          c.id === customer.id
+            ? {
+                ...c,
+                membership_status: data.type.toUpperCase(),
+                membership_id: data.id, // Store the membership ID
+                membershipDetails: {
+                  type: data.type,
+                  coverage: data.coverage,
+                  remainingBalance: data.remaining_balance,
+                  dateRegistered: data.date_registered,
+                  expireDate: data.expire_date,
+                },
+                isNewMember: true,
+                newMemberType: data.type,
+              }
+            : c
+        );
+
+        setCustomers(updatedCustomers);
+        setIsMembershipModalOpen(false);
+        setSelectedCustomer(updatedCustomers.find((c) => c.id === customer.id));
+
+        // Store the new member flag with membership ID (no expiration)
+        try {
+          localStorage.setItem(
+            `newMember:${customer.id}`,
+            JSON.stringify({
+              type: data.type,
+              membershipId: data.id, // ✅ Store the membership ID
+              createdAt: new Date().toISOString(),
+            })
+          );
+        } catch (_) {
+          // ignore storage errors
+        }
+
+        toast.success("Membership added successfully");
+
+        // Refresh the customer list to show new badges
+        setTimeout(() => {
+          refreshCustomerList();
+        }, 500);
+      } else {
+        throw new Error("Invalid response from server");
+      }
+    } catch (error) {
+      console.error("Error adding membership:", error);
+      toast.error(error.message || "Error connecting to server");
+    }
+  };
 
   // Helper function to calculate duration in months
   function calculateDuration(validToDate) {
@@ -922,31 +1064,31 @@ const shouldShowNewMemberBadge = (customer) => {
   };
 
   const handleLogout = async () => {
-  try {
-    // Call logout API if you have one
-    await fetch(`${API_BASE}/admin.php?action=logout`, {
-      method: "POST",
-      credentials: "include"
-    });
-  } catch (error) {
-    console.error("Logout API error:", error);
-  } finally {
-    // Clear ALL localStorage data
-    localStorage.removeItem("user");
-    localStorage.removeItem("user_id");
-    localStorage.removeItem("user_name");
-    localStorage.removeItem("role");
-    localStorage.removeItem("branch_id");
-    localStorage.removeItem("branch_name");
-    localStorage.removeItem("loginAttempts");
-    
-    // Clear session storage too
-    sessionStorage.clear();
-    
-    // Redirect to login page
-    window.location.href = "/";
-  }
-};
+    try {
+      // Call logout API if you have one
+      await fetch(`${API_BASE}/admin.php?action=logout`, {
+        method: "POST",
+        credentials: "include",
+      });
+    } catch (error) {
+      console.error("Logout API error:", error);
+    } finally {
+      // Clear ALL localStorage data
+      localStorage.removeItem("user");
+      localStorage.removeItem("user_id");
+      localStorage.removeItem("user_name");
+      localStorage.removeItem("role");
+      localStorage.removeItem("branch_id");
+      localStorage.removeItem("branch_name");
+      localStorage.removeItem("loginAttempts");
+
+      // Clear session storage too
+      sessionStorage.clear();
+
+      // Redirect to login page
+      window.location.href = "/";
+    }
+  };
 
   return (
     <div className="flex flex-col h-screen bg-[#77DD77] text-gray-900">
@@ -1277,9 +1419,10 @@ const shouldShowNewMemberBadge = (customer) => {
                     <p className="text-xs text-emerald-300">Administrator</p>
                   </div>
                 </div>
-                <button className="text-emerald-300 hover:text-white transition-colors"
+                <button
+                  className="text-emerald-300 hover:text-white transition-colors"
                   onClick={handleLogout}
-              >
+                >
                   <LogOut size={18} />
                 </button>
               </div>
@@ -1462,38 +1605,39 @@ const shouldShowNewMemberBadge = (customer) => {
                             whileHover={{ y: -2, backgroundColor: "#f9fafb" }}
                           >
                             {/* Customer Column */}
-<td className="px-4 py-3 md:px-6 md:py-4 whitespace-nowrap">
-  <div className="flex items-center">
-    <div className="ml-3 md:ml-4">
-      <div className="text-sm font-medium text-gray-900 flex items-center">
-        {customer.name}
-        {customer.isExpired ? (
-          <span className="ml-2 bg-gradient-to-r from-red-100 to-red-50 text-red-800 text-xs px-2 py-1 rounded-full border border-red-300 font-semibold shadow-sm">
-            ⚠️ Expired
-          </span>
-        ) : customer.isNewMember ? (
-          <span className="ml-2 bg-gradient-to-r from-amber-100 to-yellow-100 text-amber-800 text-xs px-2 py-1 rounded-full border border-amber-300 font-semibold shadow-sm animate-pulse">
-            ✨ New{" "}
-            {customer.newMemberType
-              ? customer.newMemberType
-                  .charAt(0)
-                  .toUpperCase() +
-                customer.newMemberType.slice(1)
-              : ""}{" "}
-            Member
-          </span>
-        ) : (
-          customer.membership_status &&
-          customer.membership_status.toLowerCase() !== "none" && (
-            <span className="ml-2 bg-blue-100 text-blue-800 text-xs px-1.5 py-0.5 rounded-full">
-              Member
-            </span>
-          )
-        )}
-      </div>
-    </div>
-  </div>
-</td>
+                            <td className="px-4 py-3 md:px-6 md:py-4 whitespace-nowrap">
+                              <div className="flex items-center">
+                                <div className="ml-3 md:ml-4">
+                                  <div className="text-sm font-medium text-gray-900 flex items-center">
+                                    {customer.name}
+                                    {customer.isExpired ? (
+                                      <span className="ml-2 bg-gradient-to-r from-red-100 to-red-50 text-red-800 text-xs px-2 py-1 rounded-full border border-red-300 font-semibold shadow-sm">
+                                        ⚠️ Expired
+                                      </span>
+                                    ) : customer.isNewMember ? (
+                                      <span className="ml-2 bg-gradient-to-r from-amber-100 to-yellow-100 text-amber-800 text-xs px-2 py-1 rounded-full border border-amber-300 font-semibold shadow-sm animate-pulse">
+                                        ✨ New{" "}
+                                        {customer.newMemberType
+                                          ? customer.newMemberType
+                                              .charAt(0)
+                                              .toUpperCase() +
+                                            customer.newMemberType.slice(1)
+                                          : ""}{" "}
+                                        Member
+                                      </span>
+                                    ) : (
+                                      customer.membership_status &&
+                                      customer.membership_status.toLowerCase() !==
+                                        "none" && (
+                                        <span className="ml-2 bg-blue-100 text-blue-800 text-xs px-1.5 py-0.5 rounded-full">
+                                          Member
+                                        </span>
+                                      )
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            </td>
 
                             {/* Contact Column */}
                             <td className="px-4 py-3 md:px-6 md:py-4 whitespace-nowrap">
@@ -1506,141 +1650,157 @@ const shouldShowNewMemberBadge = (customer) => {
                             </td>
 
                             {/* Membership Column */}
-<td className="px-4 py-3 md:px-6 md:py-4 whitespace-nowrap">
-  <div className="flex flex-col">
-    {(() => {
-      const rawStatus = customer.membership_status;
-      const type =
-        rawStatus &&
-        rawStatus.trim().toLowerCase() !== "none"
-          ? rawStatus.trim().toLowerCase()
-          : null;
+                            <td className="px-4 py-3 md:px-6 md:py-4 whitespace-nowrap">
+                              <div className="flex flex-col">
+                                {(() => {
+                                  const rawStatus = customer.membership_status;
+                                  const type =
+                                    rawStatus &&
+                                    rawStatus.trim().toLowerCase() !== "none"
+                                      ? rawStatus.trim().toLowerCase()
+                                      : null;
 
-      let badgeClass = "bg-gray-200 text-gray-800";
-      if (customer.isExpired) {
-        badgeClass = "bg-red-100 text-red-800 border border-red-200";
-      } else if (type === "pro") {
-        badgeClass = "bg-gradient-to-r from-purple-200 to-purple-100 text-purple-800 border border-purple-200";
-      } else if (type === "basic") {
-        badgeClass = "bg-gradient-to-r from-blue-200 to-blue-100 text-blue-800 border border-blue-200";
-      } else if (type === "promo") {
-        badgeClass = "bg-gradient-to-r from-amber-200 to-amber-100 text-amber-800 border border-amber-200";
-      }
+                                  let badgeClass = "bg-gray-200 text-gray-800";
+                                  if (customer.isExpired) {
+                                    badgeClass =
+                                      "bg-red-100 text-red-800 border border-red-200";
+                                  } else if (type === "pro") {
+                                    badgeClass =
+                                      "bg-gradient-to-r from-purple-200 to-purple-100 text-purple-800 border border-purple-200";
+                                  } else if (type === "basic") {
+                                    badgeClass =
+                                      "bg-gradient-to-r from-blue-200 to-blue-100 text-blue-800 border border-blue-200";
+                                  } else if (type === "promo") {
+                                    badgeClass =
+                                      "bg-gradient-to-r from-amber-200 to-amber-100 text-amber-800 border border-amber-200";
+                                  }
 
-      return (
-        <>
-          <span
-            className={`inline-flex items-center px-2 py-0.5 md:px-3 md:py-1 rounded-full text-xs font-medium ${badgeClass}`}
-          >
-            {customer.isExpired 
-              ? "Expired Member" 
-              : type
-                ? type.charAt(0).toUpperCase() + type.slice(1)
-                : "Non-Member"
-            }
-          </span>
-          {customer.membershipDetails && (
-            <div className="mt-1 text-xs text-gray-500 space-y-1">
-              <div>
-                Balance: ₱
-                {Number(
-                  customer.membershipDetails.remainingBalance
-                ).toLocaleString("en-PH", {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                })}
-              </div>
-              {customer.membershipDetails.expire_date && (
-                <div className={customer.isExpired ? "text-red-600 font-medium" : "text-gray-600"}>
-                  {customer.isExpired ? "Expired: " : "Expires: "}
-                  {new Date(customer.membershipDetails.expire_date).toLocaleDateString()}
-                </div>
-              )}
-            </div>
-          )}
-        </>
-      );
-    })()}
-  </div>
-</td>
+                                  return (
+                                    <>
+                                      <span
+                                        className={`inline-flex items-center px-2 py-0.5 md:px-3 md:py-1 rounded-full text-xs font-medium ${badgeClass}`}
+                                      >
+                                        {customer.isExpired
+                                          ? "Expired Member"
+                                          : type
+                                            ? type.charAt(0).toUpperCase() +
+                                              type.slice(1)
+                                            : "Non-Member"}
+                                      </span>
+                                      {customer.membershipDetails && (
+                                        <div className="mt-1 text-xs text-gray-500 space-y-1">
+                                          <div>
+                                            Balance: ₱
+                                            {Number(
+                                              customer.membershipDetails
+                                                .remainingBalance
+                                            ).toLocaleString("en-PH", {
+                                              minimumFractionDigits: 2,
+                                              maximumFractionDigits: 2,
+                                            })}
+                                          </div>
+                                          {customer.membershipDetails
+                                            .expire_date && (
+                                            <div
+                                              className={
+                                                customer.isExpired
+                                                  ? "text-red-600 font-medium"
+                                                  : "text-gray-600"
+                                              }
+                                            >
+                                              {customer.isExpired
+                                                ? "Expired: "
+                                                : "Expires: "}
+                                              {new Date(
+                                                customer.membershipDetails.expire_date
+                                              ).toLocaleDateString()}
+                                            </div>
+                                          )}
+                                        </div>
+                                      )}
+                                    </>
+                                  );
+                                })()}
+                              </div>
+                            </td>
 
-                           {/* Actions Column */}
-<td className="px-4 py-3 md:px-6 md:py-4 whitespace-nowrap text-sm text-gray-500">
-  <div className="flex space-x-2 md:space-x-3">
-    {customer.membership_status === "None" ? (
-      // Add Membership for non-members
-      <motion.button
-        onClick={(e) => {
-          e.stopPropagation();
-          handleAddMembershipClick(customer);
-        }}
-        className="text-blue-600 hover:text-blue-800 p-1 rounded-md hover:bg-blue-100 transition-colors"
-        whileHover={{ scale: 1.2 }}
-        whileTap={{ scale: 0.9 }}
-        title="Add Membership"
-      >
-        <UserPlus size={14} />
-      </motion.button>
-    ) : customer.isExpired ? (
-      // Renew for expired members
-      <motion.button
-        onClick={(e) => {
-          e.stopPropagation();
-          setSelectedCustomer(customer);
-          handleRenewMembershipClick(customer);
-          setIsRenewModalOpen(true);
-        }}
-        className="text-red-600 hover:text-red-800 p-1 rounded-md hover:bg-red-100 transition-colors"
-        whileHover={{ scale: 1.2 }}
-        whileTap={{ scale: 0.9 }}
-        title="Renew Expired Membership"
-      >
-        <RefreshCw size={14} />
-      </motion.button>
-    ) : (
-      // Renew for active members
-      <motion.button
-        onClick={(e) => {
-          e.stopPropagation();
-          setSelectedCustomer(customer);
-          handleRenewMembershipClick(customer);
-          setIsRenewModalOpen(true);
-        }}
-        className="text-green-600 hover:text-green-800 p-1 rounded-md hover:bg-green-100 transition-colors"
-        whileHover={{ scale: 1.2 }}
-        whileTap={{ scale: 0.9 }}
-        title="Renew Membership"
-      >
-        <RefreshCw size={14} />
-      </motion.button>
-    )}
-    <motion.button
-      onClick={(e) => {
-        e.stopPropagation();
-        handleEditClick(customer);
-      }}
-      className="text-gray-600 hover:text-gray-800 p-1 rounded-md hover:bg-gray-100 transition-colors"
-      whileHover={{ scale: 1.2 }}
-      whileTap={{ scale: 0.9 }}
-      title="Edit"
-    >
-      <Edit size={14} />
-    </motion.button>
-    <motion.button
-      onClick={(e) => {
-        e.stopPropagation();
-        setSelectedCustomer(customer);
-        fetchCustomerDetails(customer.id);
-      }}
-      className="text-purple-600 hover:text-purple-800 p-1 rounded-md hover:bg-purple-100 transition-colors"
-      whileHover={{ scale: 1.2 }}
-      whileTap={{ scale: 0.9 }}
-      title="View Details"
-    >
-      <Eye size={14} />
-    </motion.button>
-  </div>
-</td>
+                            {/* Actions Column */}
+                            <td className="px-4 py-3 md:px-6 md:py-4 whitespace-nowrap text-sm text-gray-500">
+                              <div className="flex space-x-2 md:space-x-3">
+                                {customer.membership_status === "None" ? (
+                                  // Add Membership for non-members
+                                  <motion.button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleAddMembershipClick(customer);
+                                    }}
+                                    className="text-blue-600 hover:text-blue-800 p-1 rounded-md hover:bg-blue-100 transition-colors"
+                                    whileHover={{ scale: 1.2 }}
+                                    whileTap={{ scale: 0.9 }}
+                                    title="Add Membership"
+                                  >
+                                    <UserPlus size={14} />
+                                  </motion.button>
+                                ) : customer.isExpired ? (
+                                  // Renew for expired members
+                                  <motion.button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setSelectedCustomer(customer);
+                                      handleRenewMembershipClick(customer);
+                                      setIsRenewModalOpen(true);
+                                    }}
+                                    className="text-red-600 hover:text-red-800 p-1 rounded-md hover:bg-red-100 transition-colors"
+                                    whileHover={{ scale: 1.2 }}
+                                    whileTap={{ scale: 0.9 }}
+                                    title="Renew Expired Membership"
+                                  >
+                                    <RefreshCw size={14} />
+                                  </motion.button>
+                                ) : (
+                                  // Renew for active members
+                                  <motion.button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setSelectedCustomer(customer);
+                                      handleRenewMembershipClick(customer);
+                                      setIsRenewModalOpen(true);
+                                    }}
+                                    className="text-green-600 hover:text-green-800 p-1 rounded-md hover:bg-green-100 transition-colors"
+                                    whileHover={{ scale: 1.2 }}
+                                    whileTap={{ scale: 0.9 }}
+                                    title="Renew Membership"
+                                  >
+                                    <RefreshCw size={14} />
+                                  </motion.button>
+                                )}
+                                <motion.button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleEditClick(customer);
+                                  }}
+                                  className="text-gray-600 hover:text-gray-800 p-1 rounded-md hover:bg-gray-100 transition-colors"
+                                  whileHover={{ scale: 1.2 }}
+                                  whileTap={{ scale: 0.9 }}
+                                  title="Edit"
+                                >
+                                  <Edit size={14} />
+                                </motion.button>
+                                <motion.button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedCustomer(customer);
+                                    fetchCustomerDetails(customer.id);
+                                  }}
+                                  className="text-purple-600 hover:text-purple-800 p-1 rounded-md hover:bg-purple-100 transition-colors"
+                                  whileHover={{ scale: 1.2 }}
+                                  whileTap={{ scale: 0.9 }}
+                                  title="View Details"
+                                >
+                                  <Eye size={14} />
+                                </motion.button>
+                              </div>
+                            </td>
                           </motion.tr>
                         ))}
                       </AnimatePresence>
@@ -1843,131 +2003,179 @@ const shouldShowNewMemberBadge = (customer) => {
                     </div>
 
                     {/* Membership Status */}
-<div>
-  <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 flex items-center">
-    <Star className="mr-2" size={14} />
-    Membership Status
-  </h3>
-  <div
-    className={`p-3 rounded-lg ${
-      selectedCustomer.isExpired
-        ? "bg-red-100 border border-red-200"
-        : selectedCustomer.membership?.toLowerCase() === "pro"
-          ? "bg-purple-100 border border-purple-200"
-          : selectedCustomer.membership?.toLowerCase() === "basic"
-            ? "bg-blue-100 border border-blue-200"
-            : selectedCustomer.membership?.toLowerCase() === "promo"
-              ? "bg-amber-100 border border-amber-200"
-              : "bg-gray-100 border border-gray-200"
-    }`}
-  >
-    <div className="flex justify-between items-center mb-2">
-      <span className="font-medium text-sm">
-        {selectedCustomer.isExpired
-          ? "EXPIRED Member"
-          : selectedCustomer.membershipDetails?.membershipName || 
-            (selectedCustomer.membership?.toLowerCase() === "pro"
-              ? "PRO Member"
-              : selectedCustomer.membership?.toLowerCase() === "basic"
-                ? "Basic Member"
-                : selectedCustomer.membership?.toLowerCase() === "promo"
-                  ? "Promo Member"
-                  : "No Membership")}
-      </span>
-      {selectedCustomer.membership !== "None" && selectedCustomer.membershipDetails?.expire_date && (
-        <span className={`text-xs ${selectedCustomer.isExpired ? 'text-red-600 font-medium' : 'text-gray-500'}`}>
-        </span>
-      )}
-    </div>
+                    <div>
+                      <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 flex items-center">
+                        <Star className="mr-2" size={14} />
+                        Membership Status
+                      </h3>
+                      <div
+                        className={`p-3 rounded-lg ${
+                          selectedCustomer.isExpired
+                            ? "bg-red-100 border border-red-200"
+                            : selectedCustomer.membership?.toLowerCase() ===
+                                "pro"
+                              ? "bg-purple-100 border border-purple-200"
+                              : selectedCustomer.membership?.toLowerCase() ===
+                                  "basic"
+                                ? "bg-blue-100 border border-blue-200"
+                                : selectedCustomer.membership?.toLowerCase() ===
+                                    "promo"
+                                  ? "bg-amber-100 border border-amber-200"
+                                  : "bg-gray-100 border border-gray-200"
+                        }`}
+                      >
+                        <div className="flex justify-between items-center mb-2">
+                          <span className="font-medium text-sm">
+                            {selectedCustomer.isExpired
+                              ? "EXPIRED Member"
+                              : selectedCustomer.membershipDetails
+                                  ?.membershipName ||
+                                (selectedCustomer.membership?.toLowerCase() ===
+                                "pro"
+                                  ? "PRO Member"
+                                  : selectedCustomer.membership?.toLowerCase() ===
+                                      "basic"
+                                    ? "Basic Member"
+                                    : selectedCustomer.membership?.toLowerCase() ===
+                                        "promo"
+                                      ? "Promo Member"
+                                      : "No Membership")}
+                          </span>
+                          {selectedCustomer.membership !== "None" &&
+                            selectedCustomer.membershipDetails?.expire_date && (
+                              <span
+                                className={`text-xs ${selectedCustomer.isExpired ? "text-red-600 font-medium" : "text-gray-500"}`}
+                              ></span>
+                            )}
+                        </div>
 
-    {selectedCustomer.membership !== "None" && (
-      <div className="space-y-2">
-        <div className="grid grid-cols-2 gap-2 text-xs">
-          <div>
-            <div className="text-gray-600">Coverage:</div>
-            <div className="font-medium truncate">
-              ₱{Number(selectedCustomer.membershipDetails?.coverage).toLocaleString("en-PH")}
-            </div>
-          </div>
-          <div>
-            <div className="text-gray-600">Remaining:</div>
-            <div className={`font-medium ${selectedCustomer.isExpired ? 'text-red-700' : 'text-green-700'}`}>
-              ₱{Number(selectedCustomer.membershipDetails?.remainingBalance).toLocaleString("en-PH")}
-            </div>
-          </div>
-        </div>
-        
-        {/* Additional info for promo memberships */}
-        {selectedCustomer.membership?.toLowerCase() === "promo" && selectedCustomer.membershipDetails?.expire_date && (
-          <div className="pt-2 border-t border-gray-200">
-            <div className="flex justify-between items-center text-xs">
-              <span className="text-gray-600">Promo Valid Until:</span>
-              <span className={`font-medium ${selectedCustomer.isExpired ? 'text-red-600' : 'text-amber-600'}`}>
-                {new Date(selectedCustomer.membershipDetails.expire_date).toLocaleDateString()}
-              </span>
-            </div>
-            {selectedCustomer.isExpired && (
-              <div className="text-xs text-red-600 font-medium mt-1 text-center">
-                ⚠️ This promo membership has expired
-              </div>
-            )}
-          </div>
-        )}
-        
-        {/* Additional info for Basic/Pro memberships with expiration */}
-        {(selectedCustomer.membership?.toLowerCase() === "basic" || selectedCustomer.membership?.toLowerCase() === "pro") && 
-         selectedCustomer.membershipDetails?.expire_date && (
-          <div className="pt-2 border-t border-gray-200">
-            <div className="flex justify-between items-center text-xs">
-              <span className="text-gray-600">Renewal Date:</span>
-              <span className={`font-medium ${selectedCustomer.isExpired ? 'text-red-600' : 'text-blue-600'}`}>
-                {new Date(selectedCustomer.membershipDetails.expire_date).toLocaleDateString()}
-              </span>
-            </div>
-          </div>
-        )}
-      </div>
-    )}
-  </div>
+                        {selectedCustomer.membership !== "None" && (
+                          <div className="space-y-2">
+                            <div className="grid grid-cols-2 gap-2 text-xs">
+                              <div>
+                                <div className="text-gray-600">Coverage:</div>
+                                <div className="font-medium truncate">
+                                  ₱
+                                  {Number(
+                                    selectedCustomer.membershipDetails?.coverage
+                                  ).toLocaleString("en-PH")}
+                                </div>
+                              </div>
+                              <div>
+                                <div className="text-gray-600">Remaining:</div>
+                                <div
+                                  className={`font-medium ${selectedCustomer.isExpired ? "text-red-700" : "text-green-700"}`}
+                                >
+                                  ₱
+                                  {Number(
+                                    selectedCustomer.membershipDetails
+                                      ?.remainingBalance
+                                  ).toLocaleString("en-PH")}
+                                </div>
+                              </div>
+                            </div>
 
-  <div className="mt-3">
-    {selectedCustomer.membership === "None" ? (
-      <motion.button
-        onClick={() => handleAddMembershipClick(selectedCustomer)}
-        className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
-        whileHover={{ scale: 1.02 }}
-        whileTap={{ scale: 0.98 }}
-      >
-        Add Membership
-      </motion.button>
-    ) : selectedCustomer.isExpired ? (
-      <motion.button
-        onClick={(e) => {
-          e.stopPropagation();
-          setIsRenewModalOpen(true);
-          handleRenewMembershipClick(selectedCustomer);
-        }}
-        className="w-full py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium transition-colors"
-        whileHover={{ scale: 1.02 }}
-        whileTap={{ scale: 0.98 }}
-      >
-        Renew Expired Membership
-      </motion.button>
-    ) : (
-      <motion.button
-        onClick={(e) => {
-          e.stopPropagation();
-          setIsRenewModalOpen(true);
-          handleRenewMembershipClick(selectedCustomer);
-        }}
-        className="w-full py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors"
-        whileHover={{ scale: 1.02 }}
-        whileTap={{ scale: 0.98 }}
-      >
-        Renew Membership
-      </motion.button>
-    )}
-  </div>
+                            {/* Additional info for promo memberships */}
+                            {selectedCustomer.membership?.toLowerCase() ===
+                              "promo" &&
+                              selectedCustomer.membershipDetails
+                                ?.expire_date && (
+                                <div className="pt-2 border-t border-gray-200">
+                                  <div className="flex justify-between items-center text-xs">
+                                    <span className="text-gray-600">
+                                      Promo Valid Until:
+                                    </span>
+                                    <span
+                                      className={`font-medium ${selectedCustomer.isExpired ? "text-red-600" : "text-amber-600"}`}
+                                    >
+                                      {new Date(
+                                        selectedCustomer.membershipDetails.expire_date
+                                      ).toLocaleDateString()}
+                                    </span>
+                                  </div>
+                                  {selectedCustomer.isExpired && (
+                                    <div className="text-xs text-red-600 font-medium mt-1 text-center">
+                                      ⚠️ This promo membership has expired
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+
+                            {/* Additional info for Basic/Pro memberships with expiration */}
+                            {(selectedCustomer.membership?.toLowerCase() ===
+                              "basic" ||
+                              selectedCustomer.membership?.toLowerCase() ===
+                                "pro") &&
+                              selectedCustomer.membershipDetails
+                                ?.expire_date && (
+                                <div className="pt-2 border-t border-gray-200">
+                                  <div className="flex justify-between items-center text-xs">
+                                    <span className="text-gray-600">
+                                      Renewal Date:
+                                    </span>
+                                    <span
+                                      className={`font-medium ${selectedCustomer.isExpired ? "text-red-600" : "text-blue-600"}`}
+                                    >
+                                      {new Date(
+                                        selectedCustomer.membershipDetails.expire_date
+                                      ).toLocaleDateString()}
+                                    </span>
+                                  </div>
+                                </div>
+                              )}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="mt-3 space-y-2">
+  {selectedCustomer.membership === "None" ? (
+    <motion.button
+      onClick={() => handleAddMembershipClick(selectedCustomer)}
+      className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
+      whileHover={{ scale: 1.02 }}
+      whileTap={{ scale: 0.98 }}
+    >
+      Add Membership
+    </motion.button>
+  ) : selectedCustomer.isExpired ? (
+    <motion.button
+      onClick={(e) => {
+        e.stopPropagation();
+        setIsRenewModalOpen(true);
+        handleRenewMembershipClick(selectedCustomer);
+      }}
+      className="w-full py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium transition-colors"
+      whileHover={{ scale: 1.02 }}
+      whileTap={{ scale: 0.98 }}
+    >
+      Renew Expired Membership
+    </motion.button>
+  ) : checkUpgradeEligibility(selectedCustomer) ? (
+    <motion.button
+      onClick={(e) => {
+        e.stopPropagation();
+        handleUpgradeClick(selectedCustomer);
+      }}
+      className="w-full py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-medium transition-colors"
+      whileHover={{ scale: 1.02 }}
+      whileTap={{ scale: 0.98 }}
+    >
+      Upgrade to Pro
+    </motion.button>
+  ) : (
+    <motion.button
+      onClick={(e) => {
+        e.stopPropagation();
+        setIsRenewModalOpen(true);
+        handleRenewMembershipClick(selectedCustomer);
+      }}
+      className="w-full py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors"
+      whileHover={{ scale: 1.02 }}
+      whileTap={{ scale: 0.98 }}
+    >
+      Renew Membership
+    </motion.button>
+  )}
 </div>
 
                     {/* Recent Activity
@@ -2033,54 +2241,61 @@ const shouldShowNewMemberBadge = (customer) => {
 
               <div className="space-y-4">
                 {/* Membership Type Selector */}
-<div>
-  <label className="block mb-1 text-sm font-medium">
-    Membership Type
-  </label>
-  <select
-  value={membershipForm.templateId}
-  onChange={(e) => {
-    const selectedId = e.target.value;
-    let template;
-    
-    if (selectedId === "basic" || selectedId === "pro") {
-      template = {
-        id: selectedId,
-        type: selectedId,
-        name: selectedId === "basic" ? "Basic" : "Pro",
-        price: selectedId === "basic" ? 3000 : 6000,
-        consumable_amount: selectedId === "basic" ? 5000 : 10000,
-        valid_until: "",
-        no_expiration: 1
-      };
-    } else {
-      template = membershipTemplates.find(m => m.id.toString() === selectedId);
-    }
+                <div>
+                  <label className="block mb-1 text-sm font-medium">
+                    Membership Type
+                  </label>
+                  <select
+                    value={membershipForm.templateId}
+                    onChange={(e) => {
+                      const selectedId = e.target.value;
+                      let template;
 
-    setMembershipForm({
-      ...membershipForm,
-      type: template.type,
-      templateId: selectedId,
-      name: template.name,
-      fee: template.price,
-      consumable: template.consumable_amount,
-      validTo: template.valid_until || "",
-      noExpiration: template.no_expiration === 1,
-    });
-  }}
-  className="w-full p-2 border rounded"
->
-  <option value="basic">Basic (₱3,000 for 5,000 consumable)</option>
-  <option value="pro">Pro (₱6,000 for 10,000 consumable)</option>
-  {membershipTemplates
-    .filter((m) => m.type === "promo")
-    .map((m) => (
-      <option key={m.id} value={m.id}>
-        {m.name} (Promo)
-      </option>
-    ))}
-</select>
-</div>
+                      if (selectedId === "basic" || selectedId === "pro") {
+                        template = {
+                          id: selectedId,
+                          type: selectedId,
+                          name: selectedId === "basic" ? "Basic" : "Pro",
+                          price: selectedId === "basic" ? 3000 : 6000,
+                          consumable_amount:
+                            selectedId === "basic" ? 5000 : 10000,
+                          valid_until: "",
+                          no_expiration: 1,
+                        };
+                      } else {
+                        template = membershipTemplates.find(
+                          (m) => m.id.toString() === selectedId
+                        );
+                      }
+
+                      setMembershipForm({
+                        ...membershipForm,
+                        type: template.type,
+                        templateId: selectedId,
+                        name: template.name,
+                        fee: template.price,
+                        consumable: template.consumable_amount,
+                        validTo: template.valid_until || "",
+                        noExpiration: template.no_expiration === 1,
+                      });
+                    }}
+                    className="w-full p-2 border rounded"
+                  >
+                    <option value="basic">
+                      Basic (₱3,000 for 5,000 consumable)
+                    </option>
+                    <option value="pro">
+                      Pro (₱6,000 for 10,000 consumable)
+                    </option>
+                    {membershipTemplates
+                      .filter((m) => m.type === "promo")
+                      .map((m) => (
+                        <option key={m.id} value={m.id}>
+                          {m.name} (Promo)
+                        </option>
+                      ))}
+                  </select>
+                </div>
 
                 {/* Payment Method Selector */}
                 <div>
@@ -2258,7 +2473,11 @@ const shouldShowNewMemberBadge = (customer) => {
                 </div>
 
                 {/* Promo-only Fields */}
-                {(selectedType === "promo" || membershipTemplates.find(m => m.id.toString() === selectedType && m.type === "promo")) && (
+                {(selectedType === "promo" ||
+                  membershipTemplates.find(
+                    (m) =>
+                      m.id.toString() === selectedType && m.type === "promo"
+                  )) && (
                   <>
                     <div>
                       <label className="block text-sm font-medium mb-1">
@@ -2516,6 +2735,107 @@ const shouldShowNewMemberBadge = (customer) => {
         )}
       </AnimatePresence>
 
+      {/* Upgrade Membership Modal */}
+      <AnimatePresence>
+        {isUpgradeModalOpen && customerForUpgrade && (
+          <motion.div
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <motion.div
+              className="bg-white p-6 rounded-lg w-full max-w-md"
+              initial={{ scale: 0.9, y: 20, opacity: 0 }}
+              animate={{ scale: 1, y: 0, opacity: 1 }}
+              exit={{ scale: 0.9, y: 20, opacity: 0 }}
+              transition={{ duration: 0.25 }}
+            >
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-bold">Upgrade to Pro Membership</h2>
+                <button
+                  onClick={() => setIsUpgradeModalOpen(false)}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  <X size={24} />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div className="bg-blue-50 p-4 rounded-lg">
+                  <h3 className="font-semibold text-blue-800 mb-2">
+                    Upgrade Details
+                  </h3>
+                  <div className="text-sm text-blue-700 space-y-1">
+                    <p>
+                      <strong>Customer:</strong> {customerForUpgrade.name}
+                    </p>
+                    <p>
+                      <strong>Current:</strong> Basic Membership (₱5,000
+                      coverage)
+                    </p>
+                    <p>
+                      <strong>Upgrade to:</strong> Pro Membership (₱10,000
+                      coverage)
+                    </p>
+                    <p>
+                      <strong>Upgrade Price:</strong> ₱3,000
+                    </p>
+                    <p className="text-xs text-blue-600 mt-2">
+                      💡 Upgrade available within 23 days of registration with
+                      unused balance
+                    </p>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Payment Method
+                  </label>
+                  <select
+                    value={upgradePaymentMethod}
+                    onChange={(e) => setUpgradePaymentMethod(e.target.value)}
+                    className="w-full p-2 border rounded"
+                  >
+                    <option value="Cash">Cash</option>
+                    <option value="GCash">GCash</option>
+                    <option value="Card">Card</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex justify-end space-x-2 mt-6">
+                <button
+                  onClick={() => setIsUpgradeModalOpen(false)}
+                  className="px-4 py-2 text-gray-600 hover:text-gray-800"
+                  disabled={isUpgrading}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() =>
+                    handleUpgradeMembership(
+                      customerForUpgrade.id,
+                      upgradePaymentMethod
+                    )
+                  }
+                  disabled={isUpgrading}
+                  className={`px-4 py-2 rounded-lg ${
+                    isUpgrading
+                      ? "bg-purple-400 cursor-not-allowed"
+                      : "bg-purple-600 hover:bg-purple-700 text-white"
+                  }`}
+                >
+                  {isUpgrading ? "Upgrading..." : "Confirm Upgrade"}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Edit Customer Modal */}
       <AnimatePresence>
         {isEditModalOpen && editCustomer && (
           <motion.div
