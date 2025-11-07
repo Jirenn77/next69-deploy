@@ -75,60 +75,56 @@ export default function CustomersPage() {
   const [isUpgrading, setIsUpgrading] = useState(false);
 
   const checkUpgradeEligibility = (customer) => {
-  // Check if customer has basic membership
-  const membershipStatus = customer.membership_status || customer.membership;
-  if (!customer.membershipDetails || membershipStatus?.toLowerCase() !== 'basic') {
-    return { eligible: false, reason: 'Not a Basic member' };
-  }
-  
-  // Get registration date with fallbacks
-  const registrationDate = customer.membershipDetails.dateRegistered || 
-                          customer.membershipDetails.date_registered;
-  
-  if (!registrationDate) {
-    return { eligible: false, reason: 'No registration date found' };
-  }
-  
-  const today = new Date();
-  const regDate = new Date(registrationDate);
-  const daysSinceRegistration = Math.floor((today - regDate) / (1000 * 60 * 60 * 24));
-  const daysRemaining = 23 - daysSinceRegistration;
-  
-  const remainingBalance = customer.membershipDetails.remainingBalance || 
-                          customer.membershipDetails.remaining_balance;
-  const originalCoverage = customer.membershipDetails.coverage;
-  
-  const isWithin23Days = daysSinceRegistration <= 23;
-  const hasFullBalance = remainingBalance >= originalCoverage;
-  
-  if (!isWithin23Days) {
-    return { 
-      eligible: false, 
-      reason: 'Upgrade period expired',
-      daysSinceRegistration,
-      daysRemaining: 0,
-      hasFullBalance
-    };
-  }
-  
-  if (!hasFullBalance) {
-    return { 
-      eligible: false, 
-      reason: 'Balance already used',
+    if (
+      !customer.membershipDetails ||
+      customer.membership_status?.toLowerCase() !== "basic"
+    ) {
+      return { eligible: false, reason: "Not a Basic member" };
+    }
+
+    const registrationDate = new Date(
+      customer.membershipDetails.dateRegistered
+    );
+    const today = new Date();
+    const daysSinceRegistration = Math.floor(
+      (today - registrationDate) / (1000 * 60 * 60 * 24)
+    );
+    const daysRemaining = 23 - daysSinceRegistration;
+
+    const remainingBalance = customer.membershipDetails.remainingBalance;
+    const originalCoverage = customer.membershipDetails.coverage;
+
+    const isWithin23Days = daysSinceRegistration <= 23;
+    const hasFullBalance = remainingBalance >= originalCoverage; // Must have full balance
+
+    if (!isWithin23Days) {
+      return {
+        eligible: false,
+        reason: "Upgrade period expired",
+        daysSinceRegistration,
+        daysRemaining: 0,
+        hasFullBalance,
+      };
+    }
+
+    if (!hasFullBalance) {
+      return {
+        eligible: false,
+        reason: "Balance already used",
+        daysSinceRegistration,
+        daysRemaining,
+        hasFullBalance,
+      };
+    }
+
+    return {
+      eligible: true,
+      reason: "Eligible for upgrade",
       daysSinceRegistration,
       daysRemaining,
-      hasFullBalance
+      hasFullBalance,
     };
-  }
-  
-  return { 
-    eligible: true, 
-    reason: 'Eligible for upgrade',
-    daysSinceRegistration,
-    daysRemaining,
-    hasFullBalance
   };
-};
 
   useEffect(() => {
     const fetchCurrentUser = async () => {
@@ -347,81 +343,55 @@ export default function CustomersPage() {
     }
   };
 
-  // Add this helper function to normalize customer data
-const normalizeCustomerData = (customer) => {
-  if (!customer) return customer;
-  
-  // Ensure membership_status is always set
-  if (!customer.membership_status && customer.membership) {
-    customer.membership_status = customer.membership;
-  }
-  
-  // Normalize membershipDetails date fields
-  if (customer.membershipDetails) {
-    if (customer.membershipDetails.date_registered && !customer.membershipDetails.dateRegistered) {
-      customer.membershipDetails.dateRegistered = customer.membershipDetails.date_registered;
-    }
-    if (customer.membershipDetails.expire_date && !customer.membershipDetails.expireDate) {
-      customer.membershipDetails.expireDate = customer.membershipDetails.expire_date;
-    }
-  }
-  
-  return customer;
-};
-
   const fetchCustomerDetails = async (customerId) => {
-  setIsLoadingDetails(true);
-  try {
-    const res = await fetch(
-      `https://api.lizlyskincare.sbs/customers.php?customerId=${customerId}`
-    );
-    const data = await res.json();
+    setIsLoadingDetails(true);
+    try {
+      const res = await fetch(
+        `https://api.lizlyskincare.sbs/customers.php?customerId=${customerId}`
+      );
+      const data = await res.json();
 
-    // Calculate isExpired for the individual customer
-    let isExpired = false;
-    if (data.membershipDetails?.expire_date || data.membershipDetails?.expireDate) {
-      const expireDate = new Date(data.membershipDetails.expire_date || data.membershipDetails.expireDate);
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      expireDate.setHours(0, 0, 0, 0);
-      isExpired = expireDate < today;
+      // Calculate isExpired for the individual customer
+      let isExpired = false;
+      if (
+        data.membershipDetails?.expire_date ||
+        data.membershipDetails?.expireDate
+      ) {
+        const expireDate = new Date(
+          data.membershipDetails.expire_date ||
+            data.membershipDetails.expireDate
+        );
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        expireDate.setHours(0, 0, 0, 0);
+        isExpired = expireDate < today;
+      }
+
+      // Make sure to include all expected properties in the result
+      setSelectedCustomer({
+        id: data.id,
+        name: data.name,
+        contact: data.contact,
+        email: data.email,
+        address: data.address,
+        birthday: data.birthday,
+        customerId: data.customerId,
+        membership: data.membership || "None",
+        membershipDetails: data.membershipDetails || null,
+        transactions: data.transactions || [],
+        isExpired: isExpired, // Add the calculated isExpired property
+        // Also preserve any existing new member flags from the local state
+        isNewMember:
+          customers.find((c) => c.id === customerId)?.isNewMember || false,
+        newMemberType: customers.find((c) => c.id === customerId)
+          ?.newMemberType,
+      });
+    } catch (error) {
+      console.error("Error fetching customer details:", error);
+    } finally {
+      setIsLoadingDetails(false);
     }
-
-    // Find the original customer data from the list to preserve upgrade eligibility flags
-    const originalCustomer = customers.find(c => c.id === customerId);
-    
-    // Make sure to include all expected properties in the result
-    setSelectedCustomer({
-      id: data.id,
-      name: data.name,
-      contact: data.contact,
-      email: data.email,
-      address: data.address,
-      birthday: data.birthday,
-      customerId: data.customerId,
-      membership: data.membership || "None",
-      membership_status: data.membership_status || data.membership || "None", // Ensure membership_status is set
-      membershipDetails: data.membershipDetails || null,
-      transactions: data.transactions || [],
-      isExpired: isExpired,
-      // Preserve the original membership details if they exist and are more complete
-      ...(originalCustomer?.membershipDetails && {
-        membershipDetails: {
-          ...data.membershipDetails,
-          // Use original dateRegistered if available, as it's crucial for upgrade calculation
-          dateRegistered: originalCustomer.membershipDetails.dateRegistered || data.membershipDetails?.date_registered
-        }
-      }),
-      // Also preserve any existing new member flags from the local state
-      isNewMember: originalCustomer?.isNewMember || false,
-      newMemberType: originalCustomer?.newMemberType,
-    });
-  } catch (error) {
-    console.error("Error fetching customer details:", error);
-  } finally {
-    setIsLoadingDetails(false);
-  }
-};
+  };
 
   const fetchMembershipLogs = async (filter = "all") => {
     setLogsLoading(true);
@@ -2349,7 +2319,7 @@ const normalizeCustomerData = (customer) => {
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
         >
-           Upgrade to Pro Membership
+          ⬆️ Upgrade to Pro Membership
         </motion.button>
       );
     } else {
