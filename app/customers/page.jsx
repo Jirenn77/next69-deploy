@@ -127,6 +127,13 @@ export default function CustomersPage() {
   };
 
   useEffect(() => {
+  if (selectedCustomer) {
+    console.log('Selected Customer:', selectedCustomer);
+    console.log('Upgrade Eligibility:', checkUpgradeEligibility(selectedCustomer));
+  }
+}, [selectedCustomer]);
+
+  useEffect(() => {
     const fetchCurrentUser = async () => {
       try {
         let finalUserData = null;
@@ -1860,39 +1867,19 @@ export default function CustomersPage() {
                                   <Edit size={14} />
                                 </motion.button>
 
-                                // In the customer details panel section, update the eye button to:
-<motion.button
-  onClick={(e) => {
-    e.stopPropagation();
-    
-    // Check if customer is eligible for upgrade
-    const upgradeStatus = checkUpgradeEligibility(customer);
-    
-    if (upgradeStatus.eligible) {
-      // If eligible for upgrade, open upgrade modal
-      setCustomerForUpgrade(customer);
-      setIsUpgradeModalOpen(true);
-    } else {
-      // If not eligible, just view details as normal
-      setSelectedCustomer(customer);
-      fetchCustomerDetails(customer.id);
-    }
-  }}
-  className={`p-1 rounded-md transition-colors ${
-    checkUpgradeEligibility(customer).eligible
-      ? "text-purple-600 hover:text-purple-800 hover:bg-purple-100"
-      : "text-purple-600 hover:text-purple-800 hover:bg-purple-100"
-  }`}
-  whileHover={{ scale: 1.2 }}
-  whileTap={{ scale: 0.9 }}
-  title={
-    checkUpgradeEligibility(customer).eligible
-      ? "View Details & Upgrade"
-      : "View Details"
-  }
->
-  <Eye size={14} />
-</motion.button>
+                                <motion.button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedCustomer(customer);
+                                    fetchCustomerDetails(customer.id);
+                                  }}
+                                  className="text-purple-600 hover:text-purple-800 p-1 rounded-md hover:bg-purple-100 transition-colors"
+                                  whileHover={{ scale: 1.2 }}
+                                  whileTap={{ scale: 0.9 }}
+                                  title="View Details"
+                                >
+                                  <Eye size={14} />
+                                </motion.button>
                               </div>
                             </td>
                           </motion.tr>
