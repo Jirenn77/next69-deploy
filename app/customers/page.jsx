@@ -75,72 +75,73 @@ export default function CustomersPage() {
   const [isUpgrading, setIsUpgrading] = useState(false);
 
   const checkUpgradeEligibility = (customer) => {
-  // If customer doesn't have membershipDetails but exists in local state, use local state data
-  const localCustomer = customers.find(c => c.id === customer.id) || customer;
-  
-  if (
-    !localCustomer.membershipDetails ||
-    localCustomer.membership_status?.toLowerCase() !== "basic"
-  ) {
-    return { eligible: false, reason: "Not a Basic member" };
-  }
+    // If customer doesn't have membershipDetails but exists in local state, use local state data
+    const localCustomer =
+      customers.find((c) => c.id === customer.id) || customer;
 
-  const registrationDate = new Date(
-    localCustomer.membershipDetails.dateRegistered
-  );
-  const today = new Date();
-  const daysSinceRegistration = Math.floor(
-    (today - registrationDate) / (1000 * 60 * 60 * 24)
-  );
-  const daysRemaining = 23 - daysSinceRegistration;
+    if (
+      !localCustomer.membershipDetails ||
+      localCustomer.membership_status?.toLowerCase() !== "basic"
+    ) {
+      return { eligible: false, reason: "Not a Basic member" };
+    }
 
-  const remainingBalance = localCustomer.membershipDetails.remainingBalance;
-  const originalCoverage = localCustomer.membershipDetails.coverage;
+    const registrationDate = new Date(
+      localCustomer.membershipDetails.dateRegistered
+    );
+    const today = new Date();
+    const daysSinceRegistration = Math.floor(
+      (today - registrationDate) / (1000 * 60 * 60 * 24)
+    );
+    const daysRemaining = 23 - daysSinceRegistration;
 
-  const isWithin23Days = daysSinceRegistration <= 23;
-  const hasFullBalance = remainingBalance >= originalCoverage;
+    const remainingBalance = localCustomer.membershipDetails.remainingBalance;
+    const originalCoverage = localCustomer.membershipDetails.coverage;
 
-  if (!isWithin23Days) {
+    const isWithin23Days = daysSinceRegistration <= 23;
+    const hasFullBalance = remainingBalance >= originalCoverage;
+
+    if (!isWithin23Days) {
+      return {
+        eligible: false,
+        reason: "Upgrade period expired",
+        daysSinceRegistration,
+        daysRemaining: 0,
+        hasFullBalance,
+      };
+    }
+
+    if (!hasFullBalance) {
+      return {
+        eligible: false,
+        reason: "Balance already used",
+        daysSinceRegistration,
+        daysRemaining,
+        hasFullBalance,
+      };
+    }
+
     return {
-      eligible: false,
-      reason: "Upgrade period expired",
-      daysSinceRegistration,
-      daysRemaining: 0,
-      hasFullBalance,
-    };
-  }
-
-  if (!hasFullBalance) {
-    return {
-      eligible: false,
-      reason: "Balance already used",
+      eligible: true,
+      reason: "Eligible for upgrade",
       daysSinceRegistration,
       daysRemaining,
       hasFullBalance,
     };
-  }
-
-  return {
-    eligible: true,
-    reason: "Eligible for upgrade",
-    daysSinceRegistration,
-    daysRemaining,
-    hasFullBalance,
   };
-};
 
   useEffect(() => {
-  if (selectedCustomer) {
-    console.log('Selected Customer Details:', {
-      id: selectedCustomer.id,
-      name: selectedCustomer.name,
-      membership_status: selectedCustomer.membership_status,
-      membership: selectedCustomer.membership,
-      membershipDetails: selectedCustomer.membershipDetails,
-      upgradeEligibility: checkUpgradeEligibility(selectedCustomer)
-    });
-  }
-}, [selectedCustomer]);
+    if (selectedCustomer) {
+      console.log("Selected Customer Details:", {
+        id: selectedCustomer.id,
+        name: selectedCustomer.name,
+        membership_status: selectedCustomer.membership_status,
+        membership: selectedCustomer.membership,
+        membershipDetails: selectedCustomer.membershipDetails,
+        upgradeEligibility: checkUpgradeEligibility(selectedCustomer),
+      });
+    }
+  }, [selectedCustomer]);
 
   useEffect(() => {
     const fetchCurrentUser = async () => {
@@ -360,57 +361,60 @@ export default function CustomersPage() {
   };
 
   const fetchCustomerDetails = async (customerId) => {
-  setIsLoadingDetails(true);
-  try {
-    const res = await fetch(
-      `https://api.lizlyskincare.sbs/customers.php?customerId=${customerId}`
-    );
-    const data = await res.json();
-
-    // Get the current customer from local state to preserve upgrade-related data
-    const currentCustomer = customers.find((c) => c.id === customerId);
-    
-    // Calculate isExpired for the individual customer
-    let isExpired = false;
-    if (
-      data.membershipDetails?.expire_date ||
-      data.membershipDetails?.expireDate
-    ) {
-      const expireDate = new Date(
-        data.membershipDetails.expire_date ||
-          data.membershipDetails.expireDate
+    setIsLoadingDetails(true);
+    try {
+      const res = await fetch(
+        `https://api.lizlyskincare.sbs/customers.php?customerId=${customerId}`
       );
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      expireDate.setHours(0, 0, 0, 0);
-      isExpired = expireDate < today;
-    }
+      const data = await res.json();
 
-    // Preserve the local state data that affects upgrade eligibility
-    setSelectedCustomer({
-      id: data.id,
-      name: data.name,
-      contact: data.contact,
-      email: data.email,
-      address: data.address,
-      birthday: data.birthday,
-      customerId: data.customerId,
-      membership: data.membership || "None",
-      membershipDetails: data.membershipDetails || null,
-      transactions: data.transactions || [],
-      isExpired: isExpired,
-      // Preserve these from local state instead of API response
-      isNewMember: currentCustomer?.isNewMember || false,
-      newMemberType: currentCustomer?.newMemberType,
-      // Preserve membership_status from local state if it exists
-      membership_status: currentCustomer?.membership_status || data.membership_status || "None",
-    });
-  } catch (error) {
-    console.error("Error fetching customer details:", error);
-  } finally {
-    setIsLoadingDetails(false);
-  }
-};
+      // Get the current customer from local state to preserve upgrade-related data
+      const currentCustomer = customers.find((c) => c.id === customerId);
+
+      // Calculate isExpired for the individual customer
+      let isExpired = false;
+      if (
+        data.membershipDetails?.expire_date ||
+        data.membershipDetails?.expireDate
+      ) {
+        const expireDate = new Date(
+          data.membershipDetails.expire_date ||
+            data.membershipDetails.expireDate
+        );
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        expireDate.setHours(0, 0, 0, 0);
+        isExpired = expireDate < today;
+      }
+
+      // Preserve the local state data that affects upgrade eligibility
+      setSelectedCustomer({
+        id: data.id,
+        name: data.name,
+        contact: data.contact,
+        email: data.email,
+        address: data.address,
+        birthday: data.birthday,
+        customerId: data.customerId,
+        membership: data.membership || "None",
+        membershipDetails: data.membershipDetails || null,
+        transactions: data.transactions || [],
+        isExpired: isExpired,
+        // Preserve these from local state instead of API response
+        isNewMember: currentCustomer?.isNewMember || false,
+        newMemberType: currentCustomer?.newMemberType,
+        // Preserve membership_status from local state if it exists
+        membership_status:
+          currentCustomer?.membership_status ||
+          data.membership_status ||
+          "None",
+      });
+    } catch (error) {
+      console.error("Error fetching customer details:", error);
+    } finally {
+      setIsLoadingDetails(false);
+    }
+  };
 
   const fetchMembershipLogs = async (filter = "all") => {
     setLogsLoading(true);
@@ -922,9 +926,9 @@ export default function CustomersPage() {
   };
 
   const handleUpgradeClick = (customer) => {
-  setCustomerForUpgrade(customer); // Change this line
-  setIsUpgradeModalOpen(true);
-};
+    setCustomerForUpgrade(customer); // Change this line
+    setIsUpgradeModalOpen(true);
+  };
 
   const handleRenewMembershipClick = (customer) => {
     setSelectedForMembership(customer);
@@ -1880,18 +1884,18 @@ export default function CustomersPage() {
                                 </motion.button>
 
                                 <motion.button
-  onClick={(e) => {
-    e.stopPropagation();
-    // Use the customer from local state instead of fetching details
-    setSelectedCustomer(customer);
-  }}
-  className="text-purple-600 hover:text-purple-800 p-1 rounded-md hover:bg-purple-100 transition-colors"
-  whileHover={{ scale: 1.2 }}
-  whileTap={{ scale: 0.9 }}
-  title="View Details"
->
-  <Eye size={14} />
-</motion.button>
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    // Use the customer from local state instead of fetching details
+                                    setSelectedCustomer(customer);
+                                  }}
+                                  className="text-purple-600 hover:text-purple-800 p-1 rounded-md hover:bg-purple-100 transition-colors"
+                                  whileHover={{ scale: 1.2 }}
+                                  whileTap={{ scale: 0.9 }}
+                                  title="View Details"
+                                >
+                                  <Eye size={14} />
+                                </motion.button>
                               </div>
                             </td>
                           </motion.tr>
@@ -2295,72 +2299,82 @@ export default function CustomersPage() {
 
                       {/* In the Customer Details Panel - Membership Status section */}
                       <div className="mt-3 space-y-2">
-  {selectedCustomer.membership === "None" || selectedCustomer.membership_status === "None" ? (
-    <motion.button
-      onClick={() => handleAddMembershipClick(selectedCustomer)}
-      className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
-      whileHover={{ scale: 1.02 }}
-      whileTap={{ scale: 0.98 }}
-    >
-      Add Membership
-    </motion.button>
-  ) : selectedCustomer.isExpired ? (
-    <motion.button
-      onClick={(e) => {
-        e.stopPropagation();
-        setIsRenewModalOpen(true);
-        handleRenewMembershipClick(selectedCustomer);
-      }}
-      className="w-full py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium transition-colors"
-      whileHover={{ scale: 1.02 }}
-      whileTap={{ scale: 0.98 }}
-    >
-      Renew Expired Membership
-    </motion.button>
-  ) : (() => {
-    // Check upgrade eligibility with proper fallbacks
-    const upgradeStatus = checkUpgradeEligibility(selectedCustomer);
-    
-    // Debug log to see what's happening
-    console.log('Upgrade status for details panel:', {
-      membership_status: selectedCustomer.membership_status,
-      membership: selectedCustomer.membership,
-      membershipDetails: selectedCustomer.membershipDetails,
-      upgradeStatus: upgradeStatus
-    });
-    
-    if (upgradeStatus.eligible) {
-      return (
-        <motion.button
-  onClick={(e) => {
-    e.stopPropagation();
-    setCustomerForUpgrade(selectedCustomer); // Add this line
-    setIsUpgradeModalOpen(true);
-  }}
-  className="w-full py-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white rounded-lg text-sm font-medium transition-colors shadow-md"
-  whileHover={{ scale: 1.02 }}
-  whileTap={{ scale: 0.98 }}
->
-  Upgrade to Pro Membership
-</motion.button>
-      );
-    } else {
-      return (
-        <motion.button
-          onClick={(e) => {
-            e.stopPropagation();
-            setIsRenewModalOpen(true);
-            handleRenewMembershipClick(selectedCustomer);
-          }}
-          className="w-full py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors"
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-        >
-          Renew Membership
-        </motion.button>
-      );
-    }
-  })()}
+                        {selectedCustomer.membership === "None" ||
+                        selectedCustomer.membership_status === "None" ? (
+                          <motion.button
+                            onClick={() =>
+                              handleAddMembershipClick(selectedCustomer)
+                            }
+                            className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                          >
+                            Add Membership
+                          </motion.button>
+                        ) : selectedCustomer.isExpired ? (
+                          <motion.button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setIsRenewModalOpen(true);
+                              handleRenewMembershipClick(selectedCustomer);
+                            }}
+                            className="w-full py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium transition-colors"
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                          >
+                            Renew Expired Membership
+                          </motion.button>
+                        ) : (
+                          (() => {
+                            // Check upgrade eligibility with proper fallbacks
+                            const upgradeStatus =
+                              checkUpgradeEligibility(selectedCustomer);
+
+                            // Debug log to see what's happening
+                            console.log("Upgrade status for details panel:", {
+                              membership_status:
+                                selectedCustomer.membership_status,
+                              membership: selectedCustomer.membership,
+                              membershipDetails:
+                                selectedCustomer.membershipDetails,
+                              upgradeStatus: upgradeStatus,
+                            });
+
+                            if (upgradeStatus.eligible) {
+                              return (
+                                <motion.button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setCustomerForUpgrade(selectedCustomer); // Add this line
+                                    setIsUpgradeModalOpen(true);
+                                  }}
+                                  className="w-full py-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white rounded-lg text-sm font-medium transition-colors shadow-md"
+                                  whileHover={{ scale: 1.02 }}
+                                  whileTap={{ scale: 0.98 }}
+                                >
+                                  Upgrade to Pro Membership
+                                </motion.button>
+                              );
+                            } else {
+                              return (
+                                <motion.button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setIsRenewModalOpen(true);
+                                    handleRenewMembershipClick(
+                                      selectedCustomer
+                                    );
+                                  }}
+                                  className="w-full py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors"
+                                  whileHover={{ scale: 1.02 }}
+                                  whileTap={{ scale: 0.98 }}
+                                >
+                                  Renew Membership
+                                </motion.button>
+                              );
+                            }
+                          })()
+                        )}
 
                         {/* Upgrade Eligibility Info - Only show for Basic members */}
                         {selectedCustomer.membership_status?.toLowerCase() ===

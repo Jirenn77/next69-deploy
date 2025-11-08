@@ -69,23 +69,88 @@ export default function CustomersPage() {
   const [membershipLogs, setMembershipLogs] = useState([]);
   const [membershipTemplates, setMembershipTemplates] = useState([]);
   const [currentUser, setCurrentUser] = useState(null);
+  const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
+  const [customerForUpgrade, setCustomerForUpgrade] = useState(null);
+  const [upgradePaymentMethod, setUpgradePaymentMethod] = useState("Cash");
+  const [isUpgrading, setIsUpgrading] = useState(false);
+
+  const checkUpgradeEligibility = (customer) => {
+    // If customer doesn't have membershipDetails but exists in local state, use local state data
+    const localCustomer =
+      customers.find((c) => c.id === customer.id) || customer;
+
+    if (
+      !localCustomer.membershipDetails ||
+      localCustomer.membership_status?.toLowerCase() !== "basic"
+    ) {
+      return { eligible: false, reason: "Not a Basic member" };
+    }
+
+    const registrationDate = new Date(
+      localCustomer.membershipDetails.dateRegistered
+    );
+    const today = new Date();
+    const daysSinceRegistration = Math.floor(
+      (today - registrationDate) / (1000 * 60 * 60 * 24)
+    );
+    const daysRemaining = 23 - daysSinceRegistration;
+
+    const remainingBalance = localCustomer.membershipDetails.remainingBalance;
+    const originalCoverage = localCustomer.membershipDetails.coverage;
+
+    const isWithin23Days = daysSinceRegistration <= 23;
+    const hasFullBalance = remainingBalance >= originalCoverage;
+
+    if (!isWithin23Days) {
+      return {
+        eligible: false,
+        reason: "Upgrade period expired",
+        daysSinceRegistration,
+        daysRemaining: 0,
+        hasFullBalance,
+      };
+    }
+
+    if (!hasFullBalance) {
+      return {
+        eligible: false,
+        reason: "Balance already used",
+        daysSinceRegistration,
+        daysRemaining,
+        hasFullBalance,
+      };
+    }
+
+    return {
+      eligible: true,
+      reason: "Eligible for upgrade",
+      daysSinceRegistration,
+      daysRemaining,
+      hasFullBalance,
+    };
+  };
+
+  useEffect(() => {
+    if (selectedCustomer) {
+      console.log("Selected Customer Details:", {
+        id: selectedCustomer.id,
+        name: selectedCustomer.name,
+        membership_status: selectedCustomer.membership_status,
+        membership: selectedCustomer.membership,
+        membershipDetails: selectedCustomer.membershipDetails,
+        upgradeEligibility: checkUpgradeEligibility(selectedCustomer),
+      });
+    }
+  }, [selectedCustomer]);
 
   useEffect(() => {
     const fetchCurrentUser = async () => {
       try {
-        // Try to get from localStorage first
-        const userData = localStorage.getItem("user");
-        if (userData) {
-          try {
-            const user = JSON.parse(userData);
-            setCurrentUser(user);
-            console.log("User from localStorage:", user);
-          } catch (error) {
-            console.error("Error parsing user data from localStorage:", error);
-          }
-        }
+        let finalUserData = null;
 
-        // Also fetch from API to get complete user data
+        console.log("=== Starting user fetch ===");
+
+        // First, try to fetch as regular user
         const currentUserResponse = await fetch(
           "https://api.lizlyskincare.sbs/branches.php?action=user",
           {
@@ -93,15 +158,57 @@ export default function CustomersPage() {
           }
         );
 
+        console.log("User endpoint status:", currentUserResponse.status);
+
         if (currentUserResponse.ok) {
           const currentUserData = await currentUserResponse.json();
-          console.log("Current User Data from API:", currentUserData);
+          console.log("User endpoint response:", currentUserData);
 
-          // Update current user with API data
-          setCurrentUser(currentUserData);
+          if (!currentUserData.error) {
+            console.log("✅ User data found via user endpoint");
+            finalUserData = currentUserData;
+          } else {
+            console.log(
+              "❌ User endpoint returned error:",
+              currentUserData.error
+            );
+          }
+        }
 
-          // Also update localStorage
-          localStorage.setItem("user", JSON.stringify(currentUserData));
+        // Always try admin endpoint if we didn't get valid data from user endpoint
+        if (!finalUserData) {
+          console.log("🔄 Trying admin endpoint...");
+          const adminResponse = await fetch(
+            "https://api.lizlyskincare.sbs/branches.php?action=admin",
+            {
+              credentials: "include",
+            }
+          );
+
+          console.log("Admin endpoint status:", adminResponse.status);
+
+          if (adminResponse.ok) {
+            const adminData = await adminResponse.json();
+            console.log("Admin endpoint response:", adminData);
+
+            if (!adminData.error) {
+              console.log("✅ Admin data found via admin endpoint");
+              finalUserData = adminData;
+            } else {
+              console.log("❌ Admin endpoint returned error:", adminData.error);
+            }
+          }
+        }
+
+        console.log("=== Final decision ===");
+        console.log("Final user data to set:", finalUserData);
+
+        if (finalUserData) {
+          setCurrentUser(finalUserData);
+          localStorage.setItem("user", JSON.stringify(finalUserData));
+          console.log("🎯 User data successfully set");
+        } else {
+          console.log("⚠️ No user data available from API endpoints");
         }
       } catch (error) {
         console.error("Error fetching user data:", error);
@@ -111,6 +218,7 @@ export default function CustomersPage() {
     fetchCurrentUser();
   }, []);
 
+  // Helper function to check if customer should show new member badge
   // Helper function to check if customer should show new member badge
   const shouldShowNewMemberBadge = (customer) => {
     try {
@@ -146,6 +254,7 @@ export default function CustomersPage() {
   const [selectedForMembership, setSelectedForMembership] = useState(null);
   const [membershipForm, setMembershipForm] = useState({
     type: "basic",
+    templateId: "basic", // Use IDs instead of type
     name: "Basic",
     fee: 3000,
     consumable: 5000,
@@ -173,7 +282,9 @@ export default function CustomersPage() {
   useEffect(() => {
     const fetchMembershipTemplates = async () => {
       try {
-        const res = await fetch("https://api.lizlyskincare.sbs/memberships.php");
+        const res = await fetch(
+          "https://api.lizlyskincare.sbs/memberships.php"
+        );
         const data = await res.json();
         setMembershipTemplates(data);
       } catch (error) {
@@ -197,28 +308,46 @@ export default function CustomersPage() {
       if (!response.ok) throw new Error("Failed to fetch customers");
       const data = await response.json();
 
-      // Decorate with persisted "new member" flags using helper function
+      // Decorate with persisted "new member" flags and check for expired memberships
       const decorated = Array.isArray(data)
         ? data.map((c) => {
             const shouldShowBadge = shouldShowNewMemberBadge(c);
-            if (!shouldShowBadge) return c;
 
-            // Get stored data for badge type
+            // Check if membership is expired
+            let isExpired = false;
+            if (
+              c.membershipDetails?.expire_date ||
+              c.membershipDetails?.expireDate
+            ) {
+              const expireDate = new Date(
+                c.membershipDetails.expire_date ||
+                  c.membershipDetails.expireDate
+              );
+              const today = new Date();
+              today.setHours(0, 0, 0, 0);
+              expireDate.setHours(0, 0, 0, 0);
+              isExpired = expireDate < today;
+            }
+
+            if (!shouldShowBadge && !isExpired) return { ...c, isExpired };
+
             try {
               const stored = localStorage.getItem(`newMember:${c.id}`);
               const parsed = JSON.parse(stored);
 
               return {
                 ...c,
-                isNewMember: true,
-                newMemberType:
-                  parsed?.type ||
-                  (c.membership_status
-                    ? String(c.membership_status).toLowerCase()
-                    : undefined),
+                isNewMember: shouldShowBadge,
+                isExpired: isExpired,
+                newMemberType: shouldShowBadge
+                  ? parsed?.type ||
+                    (c.membership_status
+                      ? String(c.membership_status).toLowerCase()
+                      : undefined)
+                  : undefined,
               };
             } catch (_) {
-              return c;
+              return { ...c, isExpired };
             }
           })
         : data;
@@ -239,7 +368,26 @@ export default function CustomersPage() {
       );
       const data = await res.json();
 
-      // Make sure to include all expected properties in the result
+      // Get the current customer from local state to preserve upgrade-related data
+      const currentCustomer = customers.find((c) => c.id === customerId);
+
+      // Calculate isExpired for the individual customer
+      let isExpired = false;
+      if (
+        data.membershipDetails?.expire_date ||
+        data.membershipDetails?.expireDate
+      ) {
+        const expireDate = new Date(
+          data.membershipDetails.expire_date ||
+            data.membershipDetails.expireDate
+        );
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        expireDate.setHours(0, 0, 0, 0);
+        isExpired = expireDate < today;
+      }
+
+      // Preserve the local state data that affects upgrade eligibility
       setSelectedCustomer({
         id: data.id,
         name: data.name,
@@ -251,6 +399,15 @@ export default function CustomersPage() {
         membership: data.membership || "None",
         membershipDetails: data.membershipDetails || null,
         transactions: data.transactions || [],
+        isExpired: isExpired,
+        // Preserve these from local state instead of API response
+        isNewMember: currentCustomer?.isNewMember || false,
+        newMemberType: currentCustomer?.newMemberType,
+        // Preserve membership_status from local state if it exists
+        membership_status:
+          currentCustomer?.membership_status ||
+          data.membership_status ||
+          "None",
       });
     } catch (error) {
       console.error("Error fetching customer details:", error);
@@ -343,16 +500,37 @@ export default function CustomersPage() {
           } else if (type === "pro") {
             coverage = 10000;
             price = 10000;
-          } else if (type === "promo") {
-            coverage = parseFloat(consumable_amount || 0);
-            price = parseFloat(price || 0);
+          } else if (
+            type === "promo" ||
+            membershipTemplates.find(
+              (m) => m.id.toString() === type && m.type === "promo"
+            )
+          ) {
+            const selectedTemplate = membershipTemplates.find(
+              (m) => m.id.toString() === type
+            );
+            coverage = parseFloat(
+              consumable_amount || selectedTemplate?.consumable_amount || 0
+            );
+            price = parseFloat(price || selectedTemplate?.price || 0);
           }
 
-          if (!expireDate && type !== "promo") {
+          const isPromoType =
+            type === "promo" ||
+            membershipTemplates.find(
+              (m) => m.id.toString() === type && m.type === "promo"
+            );
+
+          if (!expireDate && !isPromoType) {
             const today = new Date();
             today.setMonth(today.getMonth() + (type === "pro" ? 2 : 1));
             expireDate = today.toISOString().split("T")[0];
           }
+
+          // Use consistent user ID and branch ID fields
+          const userId = currentUser?.id || currentUser?.user_id || null;
+          const branchId = currentUser?.branch_id || null;
+          const userName = currentUser?.name || "Unknown User";
 
           const payload = {
             customer_id: customerId,
@@ -362,16 +540,19 @@ export default function CustomersPage() {
             price,
             expire_date: expireDate,
             payment_method: payment,
-            branch_id: currentUser?.branch_id || null,
-            performed_by: currentUser?.user_id || null,
-            performed_by_name: currentUser?.name || "Unknown User",
+            branch_id: branchId,
+            performed_by: userId,
+            performed_by_name: userName,
           };
 
-          const response = await fetch("https://api.lizlyskincare.sbs/members.php", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
-          });
+          const response = await fetch(
+            "https://api.lizlyskincare.sbs/members.php",
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(payload),
+            }
+          );
 
           const data = await response.json();
           if (data.error) {
@@ -391,15 +572,23 @@ export default function CustomersPage() {
       let coverage = 0;
       let expireDate = null;
 
-      const isPromoType = type === "promo" || membershipTemplates.find(m => m.id.toString() === type && m.type === "promo");
-      
+      const isPromoType =
+        type === "promo" ||
+        membershipTemplates.find(
+          (m) => m.id.toString() === type && m.type === "promo"
+        );
+
       if (type === "basic") {
         coverage = 5000;
       } else if (type === "pro") {
         coverage = 10000;
       } else if (isPromoType) {
-        const selectedTemplate = membershipTemplates.find(m => m.id.toString() === type);
-        coverage = parseFloat(consumable_amount || (selectedTemplate?.consumable_amount || 0));
+        const selectedTemplate = membershipTemplates.find(
+          (m) => m.id.toString() === type
+        );
+        coverage = parseFloat(
+          consumable_amount || selectedTemplate?.consumable_amount || 0
+        );
         if (!no_expiration && valid_until) {
           expireDate = valid_until;
         }
@@ -418,6 +607,11 @@ export default function CustomersPage() {
         return;
       }
 
+      // Use consistent user ID and branch ID fields
+      const userId = currentUser?.id || currentUser?.user_id || null;
+      const branchId = currentUser?.branch_id || null;
+      const userName = currentUser?.name || "Unknown User";
+
       // Determine the actual type from template if template ID was selected
       const actualType = isPromoType ? "promo" : type;
 
@@ -430,18 +624,21 @@ export default function CustomersPage() {
         price: parseFloat(price || 0),
         expire_date: expireDate,
         payment_method: payment,
-        branch_id: currentUser?.branch_id || null,
-        performed_by: currentUser?.user_id || null,
-        performed_by_name: currentUser?.name || "Unknown User",
+        branch_id: branchId,
+        performed_by: userId,
+        performed_by_name: userName,
       };
 
       console.log("Sending renewal payload:", payload);
 
-      const response = await fetch("https://api.lizlyskincare.sbs/members.php", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
+      const response = await fetch(
+        "https://api.lizlyskincare.sbs/members.php",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        }
+      );
 
       const data = await response.json();
       if (data.error) {
@@ -461,10 +658,10 @@ export default function CustomersPage() {
           type,
           amount: coverage,
           payment_method: payment,
-          // Add user tracking to logs
-          branch_id: currentUser?.branch_id || null,
-          performed_by: currentUser?.user_id || null,
-          performed_by_name: currentUser?.name || "Unknown User",
+          // Use consistent user tracking fields
+          branch_id: branchId,
+          performed_by: userId,
+          performed_by_name: userName,
         }),
       });
 
@@ -501,6 +698,74 @@ export default function CustomersPage() {
     } catch (error) {
       toast.error("❌ Failed to renew membership.");
       console.error("Renewal error:", error);
+    }
+  };
+
+  // Update the handleUpgradeMembership function
+  const handleUpgradeMembership = async (customerId, paymentMethod) => {
+    try {
+      setIsUpgrading(true);
+
+      // Get the current membership ID
+      const customer = customerForUpgrade || selectedCustomer;
+      const membershipId =
+        customer.membership_id || customer.membershipDetails?.id;
+
+      if (!membershipId) {
+        throw new Error("Cannot find membership ID for upgrade");
+      }
+
+      const userId = currentUser?.id || currentUser?.user_id || null;
+      const branchId = currentUser?.branch_id || null;
+      const userName = currentUser?.name || "Unknown User";
+
+      const response = await fetch(
+        "https://api.lizlyskincare.sbs/members.php",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            customer_id: customerId,
+            membership_id: membershipId,
+            action: "upgrade",
+            type: "pro",
+            payment_method: paymentMethod,
+            branch_id: branchId,
+            performed_by: userId,
+            performed_by_name: userName,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (data.error) {
+        throw new Error(data.error);
+      }
+
+      toast.success("✅ Membership upgraded to Pro successfully!");
+
+      // Clear new member badge if it exists
+      try {
+        localStorage.removeItem(`newMember:${customerId}`);
+      } catch (_) {
+        // ignore storage errors
+      }
+
+      // Refresh customer data
+      if (selectedCustomer?.id === customerId) {
+        fetchCustomerDetails(customerId);
+      }
+
+      // Refresh the customers list
+      fetchCustomers(activeTab);
+
+      setIsUpgradeModalOpen(false);
+    } catch (error) {
+      console.error("Upgrade error:", error);
+      toast.error(`❌ ${error.message}`);
+    } finally {
+      setIsUpgrading(false);
     }
   };
 
@@ -545,18 +810,24 @@ export default function CustomersPage() {
         }
       }
 
+      // Use consistent user ID and branch ID fields
+      const userId = userData?.id || userData?.user_id || null;
+      const branchId = userData?.branch_id || null;
+      const userName = userData?.name || "Unknown User";
+
       const body = {
         customer_id: customer.id,
         action: "New Member",
         type: membershipForm.type.toLowerCase(),
+        template_id: membershipForm.templateId,
         coverage: parseFloat(membershipForm.consumable),
         remaining_balance: parseFloat(membershipForm.consumable),
         payment_method: membershipForm.paymentMethod || "cash",
         note: membershipForm.description || "",
         duration: 1,
-        branch_id: currentUser?.branch_id || null,
-        performed_by: currentUser?.user_id || null,
-        performed_by_name: currentUser?.name || "Unknown User",
+        branch_id: branchId,
+        performed_by: userId,
+        performed_by_name: userName,
       };
 
       console.log("Sending membership data:", body); // Debug log
@@ -569,13 +840,16 @@ export default function CustomersPage() {
         body.duration = calculateDuration(membershipForm.validTo);
       }
 
-      const response = await fetch("https://api.lizlyskincare.sbs/members.php", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(body),
-      });
+      const response = await fetch(
+        "https://api.lizlyskincare.sbs/members.php",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(body),
+        }
+      );
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -649,6 +923,11 @@ export default function CustomersPage() {
   const handleAddMembershipClick = (customer) => {
     setSelectedForMembership(customer);
     setIsMembershipModalOpen(true);
+  };
+
+  const handleUpgradeClick = (customer) => {
+    setCustomerForUpgrade(customer); // Change this line
+    setIsUpgradeModalOpen(true);
   };
 
   const handleRenewMembershipClick = (customer) => {
@@ -842,40 +1121,32 @@ export default function CustomersPage() {
     }
   };
 
- const handleLogout = async () => {
-  try {
-    // Try to call logout on both endpoints to clear any session type
-    const logoutPromises = [
-      fetch(`${API_BASE}/admin.php?action=logout`, {
+  const handleLogout = async () => {
+    try {
+      // Call logout API if you have one
+      await fetch(`${API_BASE}/admin.php?action=logout`, {
         method: "POST",
-        credentials: "include"
-      }),
-      fetch(`${API_BASE}/users.php?action=logout`, {
-        method: "POST", 
-        credentials: "include"
-      })
-    ];
-    
-    await Promise.allSettled(logoutPromises);
-  } catch (error) {
-    console.error("Logout API error:", error);
-  } finally {
-    // Clear ALL localStorage data
-    localStorage.removeItem("user");
-    localStorage.removeItem("user_id");
-    localStorage.removeItem("user_name");
-    localStorage.removeItem("role");
-    localStorage.removeItem("branch_id");
-    localStorage.removeItem("branch_name");
-    localStorage.removeItem("loginAttempts");
-    
-    // Clear session storage too
-    sessionStorage.clear();
-    
-    // Redirect to login page
-    window.location.href = "/";
-  }
-};
+        credentials: "include",
+      });
+    } catch (error) {
+      console.error("Logout API error:", error);
+    } finally {
+      // Clear ALL localStorage data
+      localStorage.removeItem("user");
+      localStorage.removeItem("user_id");
+      localStorage.removeItem("user_name");
+      localStorage.removeItem("role");
+      localStorage.removeItem("branch_id");
+      localStorage.removeItem("branch_name");
+      localStorage.removeItem("loginAttempts");
+
+      // Clear session storage too
+      sessionStorage.clear();
+
+      // Redirect to login page
+      window.location.href = "/";
+    }
+  };
 
   return (
     <div className="flex flex-col h-screen bg-[#77DD77] text-gray-900">
@@ -943,7 +1214,7 @@ export default function CustomersPage() {
         </div>
       </header>
 
-      {/* Enhanced Sidebar */}
+{/* Enhanced Sidebar */}
       <div className="flex flex-1">
         <nav className="w-64 h-screen bg-gradient-to-b from-emerald-800 to-emerald-700 text-white flex flex-col items-start py-6 fixed top-0 left-0 shadow-lg z-10">
           {/* Logo/Branding with subtle animation */}
@@ -1397,9 +1668,13 @@ export default function CustomersPage() {
                             <td className="px-4 py-3 md:px-6 md:py-4 whitespace-nowrap">
                               <div className="flex items-center">
                                 <div className="ml-3 md:ml-4">
-                                  <div className="text-sm font-medium text-gray-900 flex items-center">
+                                  <div className="text-sm font-medium text-gray-900 flex items-center flex-wrap gap-1">
                                     {customer.name}
-                                    {customer.isNewMember ? (
+                                    {customer.isExpired ? (
+                                      <span className="ml-2 bg-gradient-to-r from-red-100 to-red-50 text-red-800 text-xs px-2 py-1 rounded-full border border-red-300 font-semibold shadow-sm">
+                                        ⚠️ Expired
+                                      </span>
+                                    ) : customer.isNewMember ? (
                                       <span className="ml-2 bg-gradient-to-r from-amber-100 to-yellow-100 text-amber-800 text-xs px-2 py-1 rounded-full border border-amber-300 font-semibold shadow-sm animate-pulse">
                                         ✨ New{" "}
                                         {customer.newMemberType
@@ -1419,6 +1694,25 @@ export default function CustomersPage() {
                                         </span>
                                       )
                                     )}
+
+                                    {/* Upgrade Eligibility Indicator - ONLY SHOW FOR FULL BALANCE */}
+                                    {(() => {
+                                      const upgradeStatus =
+                                        checkUpgradeEligibility(customer);
+
+                                      // Only show indicator if eligible (within 23 days AND has full balance)
+                                      if (upgradeStatus.eligible) {
+                                        return (
+                                          <span className="bg-gradient-to-r from-purple-100 to-pink-100 text-purple-800 text-xs px-2 py-1 rounded-full border border-purple-300 font-semibold shadow-sm animate-pulse">
+                                            ⬆️ Upgrade Available (
+                                            {upgradeStatus.daysRemaining}d left)
+                                          </span>
+                                        );
+                                      }
+
+                                      // Don't show any upgrade indicator if balance is used, even if within 23 days
+                                      return null;
+                                    })()}
                                   </div>
                                 </div>
                               </div>
@@ -1446,25 +1740,31 @@ export default function CustomersPage() {
                                       : null;
 
                                   let badgeClass = "bg-gray-200 text-gray-800";
-                                  if (type === "pro")
+                                  if (customer.isExpired) {
+                                    badgeClass =
+                                      "bg-red-100 text-red-800 border border-red-200";
+                                  } else if (type === "pro") {
                                     badgeClass =
                                       "bg-gradient-to-r from-purple-200 to-purple-100 text-purple-800 border border-purple-200";
-                                  else if (type === "basic")
+                                  } else if (type === "basic") {
                                     badgeClass =
                                       "bg-gradient-to-r from-blue-200 to-blue-100 text-blue-800 border border-blue-200";
-                                  else if (type === "promo")
+                                  } else if (type === "promo") {
                                     badgeClass =
                                       "bg-gradient-to-r from-amber-200 to-amber-100 text-amber-800 border border-amber-200";
+                                  }
 
                                   return (
                                     <>
                                       <span
                                         className={`inline-flex items-center px-2 py-0.5 md:px-3 md:py-1 rounded-full text-xs font-medium ${badgeClass}`}
                                       >
-                                        {type
-                                          ? type.charAt(0).toUpperCase() +
-                                            type.slice(1)
-                                          : "Non-Member"}
+                                        {customer.isExpired
+                                          ? "Expired Member"
+                                          : type
+                                            ? type.charAt(0).toUpperCase() +
+                                              type.slice(1)
+                                            : "Non-Member"}
                                       </span>
                                       {customer.membershipDetails && (
                                         <div className="mt-1 text-xs text-gray-500 space-y-1">
@@ -1478,6 +1778,23 @@ export default function CustomersPage() {
                                               maximumFractionDigits: 2,
                                             })}
                                           </div>
+                                          {customer.membershipDetails
+                                            .expire_date && (
+                                            <div
+                                              className={
+                                                customer.isExpired
+                                                  ? "text-red-600 font-medium"
+                                                  : "text-gray-600"
+                                              }
+                                            >
+                                              {customer.isExpired
+                                                ? "Expired: "
+                                                : "Expires: "}
+                                              {new Date(
+                                                customer.membershipDetails.expire_date
+                                              ).toLocaleDateString()}
+                                            </div>
+                                          )}
                                         </div>
                                       )}
                                     </>
@@ -1490,7 +1807,7 @@ export default function CustomersPage() {
                             <td className="px-4 py-3 md:px-6 md:py-4 whitespace-nowrap text-sm text-gray-500">
                               <div className="flex space-x-2 md:space-x-3">
                                 {customer.membership_status === "None" ? (
-                                  // Add Membership
+                                  // Add Membership for non-members
                                   <motion.button
                                     onClick={(e) => {
                                       e.stopPropagation();
@@ -1503,11 +1820,44 @@ export default function CustomersPage() {
                                   >
                                     <UserPlus size={14} />
                                   </motion.button>
-                                ) : (
+                                ) : customer.isExpired ? (
+                                  // Renew for expired members
                                   <motion.button
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      // Set the customer first, then open modal
+                                      setSelectedCustomer(customer);
+                                      handleRenewMembershipClick(customer);
+                                      setIsRenewModalOpen(true);
+                                    }}
+                                    className="text-red-600 hover:text-red-800 p-1 rounded-md hover:bg-red-100 transition-colors"
+                                    whileHover={{ scale: 1.2 }}
+                                    whileTap={{ scale: 0.9 }}
+                                    title="Renew Expired Membership"
+                                  >
+                                    <RefreshCw size={14} />
+                                  </motion.button>
+                                ) : checkUpgradeEligibility(customer)
+                                    .eligible ? (
+                                  // Upgrade for eligible Basic members (within 23 days AND full balance)
+                                  <motion.button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setSelectedCustomer(customer);
+                                      handleUpgradeClick(customer);
+                                      setIsUpgradeModalOpen(true);
+                                    }}
+                                    className="text-purple-600 hover:text-purple-800 p-1 rounded-md hover:bg-purple-100 transition-colors"
+                                    whileHover={{ scale: 1.2 }}
+                                    whileTap={{ scale: 0.9 }}
+                                    title="Upgrade to Pro"
+                                  >
+                                    <Activity size={14} />
+                                  </motion.button>
+                                ) : (
+                                  // Renew for all other active members (including Basic with used balance)
+                                  <motion.button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
                                       setSelectedCustomer(customer);
                                       handleRenewMembershipClick(customer);
                                       setIsRenewModalOpen(true);
@@ -1520,6 +1870,8 @@ export default function CustomersPage() {
                                     <RefreshCw size={14} />
                                   </motion.button>
                                 )}
+
+                                {/* Edit and View buttons remain the same */}
                                 <motion.button
                                   onClick={(e) => {
                                     e.stopPropagation();
@@ -1532,11 +1884,12 @@ export default function CustomersPage() {
                                 >
                                   <Edit size={14} />
                                 </motion.button>
+
                                 <motion.button
                                   onClick={(e) => {
                                     e.stopPropagation();
+                                    // Use the customer from local state instead of fetching details
                                     setSelectedCustomer(customer);
-                                    fetchCustomerDetails(customer.id);
                                   }}
                                   className="text-purple-600 hover:text-purple-800 p-1 rounded-md hover:bg-purple-100 transition-colors"
                                   whileHover={{ scale: 1.2 }}
@@ -1756,61 +2109,200 @@ export default function CustomersPage() {
                       </h3>
                       <div
                         className={`p-3 rounded-lg ${
-                          selectedCustomer.membership?.toLowerCase() === "pro"
-                            ? "bg-purple-100 border border-purple-200"
+                          selectedCustomer.isExpired
+                            ? "bg-red-100 border border-red-200"
                             : selectedCustomer.membership?.toLowerCase() ===
-                                "basic"
-                              ? "bg-blue-100 border border-blue-200"
+                                "pro"
+                              ? "bg-purple-100 border border-purple-200"
                               : selectedCustomer.membership?.toLowerCase() ===
-                                  "promo"
-                                ? "bg-amber-100 border border-amber-200"
-                                : "bg-gray-100 border border-gray-200"
+                                  "basic"
+                                ? "bg-blue-100 border border-blue-200"
+                                : selectedCustomer.membership?.toLowerCase() ===
+                                    "promo"
+                                  ? "bg-amber-100 border border-amber-200"
+                                  : "bg-gray-100 border border-gray-200"
                         }`}
                       >
                         <div className="flex justify-between items-center mb-2">
                           <span className="font-medium text-sm">
-                            {selectedCustomer.membership?.toLowerCase() ===
-                            "pro"
-                              ? "PRO Member"
-                              : selectedCustomer.membership?.toLowerCase() ===
-                                  "basic"
-                                ? "Basic Member"
-                                : selectedCustomer.membership?.toLowerCase() ===
-                                    "promo"
-                                  ? "Membership Promo"
-                                  : "No Membership"}
+                            {selectedCustomer.isExpired
+                              ? "EXPIRED Member"
+                              : selectedCustomer.membershipDetails
+                                  ?.membershipName ||
+                                (selectedCustomer.membership?.toLowerCase() ===
+                                "pro"
+                                  ? "PRO Member"
+                                  : selectedCustomer.membership?.toLowerCase() ===
+                                      "basic"
+                                    ? "Basic Member"
+                                    : selectedCustomer.membership?.toLowerCase() ===
+                                        "promo"
+                                      ? "Promo Member"
+                                      : "No Membership")}
+
+                            {/* Upgrade indicator badge */}
+                            {checkUpgradeEligibility(selectedCustomer)
+                              .eligible && (
+                              <span className="ml-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white text-xs px-2 py-1 rounded-full animate-pulse">
+                                Upgrade Available
+                              </span>
+                            )}
                           </span>
-                          {selectedCustomer.membership !== "None" && (
-                            <span className="text-xs text-gray-500">
-                              {selectedCustomer.membershipDetails?.expireDate}
-                            </span>
-                          )}
                         </div>
 
                         {selectedCustomer.membership !== "None" && (
-                          <div className="grid grid-cols-2 gap-2 text-xs">
-                            <div>
-                              <div className="text-gray-600">Coverage:</div>
-                              <div className="font-medium truncate">
-                                {selectedCustomer.membershipDetails?.coverage}
+                          <div className="space-y-2">
+                            <div className="grid grid-cols-2 gap-2 text-xs">
+                              <div>
+                                <div className="text-gray-600">Coverage:</div>
+                                <div className="font-medium truncate">
+                                  ₱
+                                  {Number(
+                                    selectedCustomer.membershipDetails?.coverage
+                                  ).toLocaleString("en-PH")}
+                                </div>
+                              </div>
+                              <div>
+                                <div className="text-gray-600">Remaining:</div>
+                                <div
+                                  className={`font-medium ${
+                                    selectedCustomer.isExpired
+                                      ? "text-red-700"
+                                      : selectedCustomer.membershipDetails
+                                            ?.remainingBalance ===
+                                          selectedCustomer.membershipDetails
+                                            ?.coverage
+                                        ? "text-green-700"
+                                        : "text-blue-700"
+                                  }`}
+                                >
+                                  ₱
+                                  {Number(
+                                    selectedCustomer.membershipDetails
+                                      ?.remainingBalance
+                                  ).toLocaleString("en-PH")}
+                                  {selectedCustomer.membershipDetails
+                                    ?.remainingBalance ===
+                                    selectedCustomer.membershipDetails
+                                      ?.coverage &&
+                                    selectedCustomer.membership?.toLowerCase() ===
+                                      "basic" && (
+                                      <span className="text-green-600 ml-1">
+                                        ✓ Full
+                                      </span>
+                                    )}
+                                  {selectedCustomer.membershipDetails
+                                    ?.remainingBalance <
+                                    selectedCustomer.membershipDetails
+                                      ?.coverage &&
+                                    selectedCustomer.membership?.toLowerCase() ===
+                                      "basic" && (
+                                      <span className="text-red-600 ml-1">
+                                        ✗ Used
+                                      </span>
+                                    )}
+                                </div>
                               </div>
                             </div>
-                            <div>
-                              <div className="text-gray-600">Remaining:</div>
-                              <div className="font-medium text-green-700">
-                                ₱
-                                {
-                                  selectedCustomer.membershipDetails
-                                    ?.remainingBalance
-                                }
-                              </div>
-                            </div>
+
+                            {/* Additional info for Basic members */}
+                            {selectedCustomer.membership?.toLowerCase() ===
+                              "basic" &&
+                              selectedCustomer.membershipDetails
+                                ?.dateRegistered && (
+                                <div className="pt-2 border-t border-gray-200">
+                                  <div className="flex justify-between items-center text-xs">
+                                    <span className="text-gray-600">
+                                      Registered:
+                                    </span>
+                                    <span className="font-medium text-blue-600">
+                                      {new Date(
+                                        selectedCustomer.membershipDetails.dateRegistered
+                                      ).toLocaleDateString()}
+                                    </span>
+                                  </div>
+                                  <div className="flex justify-between items-center text-xs mt-1">
+                                    <span className="text-gray-600">
+                                      Days since registration:
+                                    </span>
+                                    <span
+                                      className={`font-medium ${
+                                        checkUpgradeEligibility(
+                                          selectedCustomer
+                                        ).eligible
+                                          ? "text-green-600"
+                                          : "text-gray-600"
+                                      }`}
+                                    >
+                                      {Math.floor(
+                                        (new Date() -
+                                          new Date(
+                                            selectedCustomer.membershipDetails.dateRegistered
+                                          )) /
+                                          (1000 * 60 * 60 * 24)
+                                      )}{" "}
+                                      / 23 days
+                                    </span>
+                                  </div>
+                                </div>
+                              )}
+
+                            {/* Additional info for promo memberships */}
+                            {selectedCustomer.membership?.toLowerCase() ===
+                              "promo" &&
+                              selectedCustomer.membershipDetails
+                                ?.expire_date && (
+                                <div className="pt-2 border-t border-gray-200">
+                                  <div className="flex justify-between items-center text-xs">
+                                    <span className="text-gray-600">
+                                      Promo Valid Until:
+                                    </span>
+                                    <span
+                                      className={`font-medium ${selectedCustomer.isExpired ? "text-red-600" : "text-amber-600"}`}
+                                    >
+                                      {new Date(
+                                        selectedCustomer.membershipDetails.expire_date
+                                      ).toLocaleDateString()}
+                                    </span>
+                                  </div>
+                                  {selectedCustomer.isExpired && (
+                                    <div className="text-xs text-red-600 font-medium mt-1 text-center">
+                                      ⚠️ This promo membership has expired
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+
+                            {/* Additional info for Basic/Pro memberships with expiration */}
+                            {(selectedCustomer.membership?.toLowerCase() ===
+                              "basic" ||
+                              selectedCustomer.membership?.toLowerCase() ===
+                                "pro") &&
+                              selectedCustomer.membershipDetails
+                                ?.expire_date && (
+                                <div className="pt-2 border-t border-gray-200">
+                                  <div className="flex justify-between items-center text-xs">
+                                    <span className="text-gray-600">
+                                      Renewal Date:
+                                    </span>
+                                    <span
+                                      className={`font-medium ${selectedCustomer.isExpired ? "text-red-600" : "text-blue-600"}`}
+                                    >
+                                      {new Date(
+                                        selectedCustomer.membershipDetails.expire_date
+                                      ).toLocaleDateString()}
+                                    </span>
+                                  </div>
+                                </div>
+                              )}
                           </div>
                         )}
                       </div>
 
-                      <div className="mt-3">
-                        {selectedCustomer.membership === "None" ? (
+                      {/* In the Customer Details Panel - Membership Status section */}
+                      <div className="mt-3 space-y-2">
+                        {selectedCustomer.membership === "None" ||
+                        selectedCustomer.membership_status === "None" ? (
                           <motion.button
                             onClick={() =>
                               handleAddMembershipClick(selectedCustomer)
@@ -1821,20 +2313,122 @@ export default function CustomersPage() {
                           >
                             Add Membership
                           </motion.button>
-                        ) : (
+                        ) : selectedCustomer.isExpired ? (
                           <motion.button
                             onClick={(e) => {
                               e.stopPropagation();
                               setIsRenewModalOpen(true);
                               handleRenewMembershipClick(selectedCustomer);
                             }}
-                            className="w-full py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors"
+                            className="w-full py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium transition-colors"
                             whileHover={{ scale: 1.02 }}
                             whileTap={{ scale: 0.98 }}
                           >
-                            Renew Membership
+                            Renew Expired Membership
                           </motion.button>
+                        ) : (
+                          (() => {
+                            // Check upgrade eligibility with proper fallbacks
+                            const upgradeStatus =
+                              checkUpgradeEligibility(selectedCustomer);
+
+                            // Debug log to see what's happening
+                            console.log("Upgrade status for details panel:", {
+                              membership_status:
+                                selectedCustomer.membership_status,
+                              membership: selectedCustomer.membership,
+                              membershipDetails:
+                                selectedCustomer.membershipDetails,
+                              upgradeStatus: upgradeStatus,
+                            });
+
+                            if (upgradeStatus.eligible) {
+                              return (
+                                <motion.button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setCustomerForUpgrade(selectedCustomer); // Add this line
+                                    setIsUpgradeModalOpen(true);
+                                  }}
+                                  className="w-full py-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white rounded-lg text-sm font-medium transition-colors shadow-md"
+                                  whileHover={{ scale: 1.02 }}
+                                  whileTap={{ scale: 0.98 }}
+                                >
+                                  Upgrade to Pro Membership
+                                </motion.button>
+                              );
+                            } else {
+                              return (
+                                <motion.button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setIsRenewModalOpen(true);
+                                    handleRenewMembershipClick(
+                                      selectedCustomer
+                                    );
+                                  }}
+                                  className="w-full py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors"
+                                  whileHover={{ scale: 1.02 }}
+                                  whileTap={{ scale: 0.98 }}
+                                >
+                                  Renew Membership
+                                </motion.button>
+                              );
+                            }
+                          })()
                         )}
+
+                        {/* Upgrade Eligibility Info - Only show for Basic members */}
+                        {selectedCustomer.membership_status?.toLowerCase() ===
+                          "basic" &&
+                          !selectedCustomer.isExpired && (
+                            <div className="mt-2 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                              <div className="flex items-center justify-between text-xs">
+                                <span className="text-gray-600 font-medium">
+                                  Upgrade to Pro Status:
+                                </span>
+                                {(() => {
+                                  const upgradeStatus =
+                                    checkUpgradeEligibility(selectedCustomer);
+                                  if (upgradeStatus.eligible) {
+                                    return (
+                                      <span className="text-green-600 font-semibold">
+                                        ✅ Eligible (
+                                        {upgradeStatus.daysRemaining} days
+                                        remaining)
+                                      </span>
+                                    );
+                                  } else if (
+                                    upgradeStatus.daysRemaining > 0 &&
+                                    !upgradeStatus.hasFullBalance
+                                  ) {
+                                    return (
+                                      <span className="text-red-600">
+                                        ❌ Balance already used - cannot upgrade
+                                      </span>
+                                    );
+                                  } else if (upgradeStatus.daysRemaining > 0) {
+                                    return (
+                                      <span className="text-amber-600">
+                                        ⏳ {upgradeStatus.daysRemaining} days
+                                        left
+                                      </span>
+                                    );
+                                  } else {
+                                    return (
+                                      <span className="text-red-600">
+                                        ❌ Upgrade period expired
+                                      </span>
+                                    );
+                                  }
+                                })()}
+                              </div>
+                              <div className="mt-1 text-xs text-gray-500">
+                                Upgrade available within 23 days with full
+                                ₱5,000 balance
+                              </div>
+                            </div>
+                          )}
                       </div>
                     </div>
 
@@ -1906,38 +2500,37 @@ export default function CustomersPage() {
                     Membership Type
                   </label>
                   <select
-                    value={membershipForm.type}
+                    value={membershipForm.templateId}
                     onChange={(e) => {
-                      const type = e.target.value;
-                      const template = membershipTemplates.find(
-                        (m) => m.type === type
-                      );
+                      const selectedId = e.target.value;
+                      let template;
+
+                      if (selectedId === "basic" || selectedId === "pro") {
+                        template = {
+                          id: selectedId,
+                          type: selectedId,
+                          name: selectedId === "basic" ? "Basic" : "Pro",
+                          price: selectedId === "basic" ? 3000 : 6000,
+                          consumable_amount:
+                            selectedId === "basic" ? 5000 : 10000,
+                          valid_until: "",
+                          no_expiration: 1,
+                        };
+                      } else {
+                        template = membershipTemplates.find(
+                          (m) => m.id.toString() === selectedId
+                        );
+                      }
 
                       setMembershipForm({
                         ...membershipForm,
-                        type,
-                        name: template
-                          ? template.name
-                          : type === "basic"
-                            ? "Basic"
-                            : "Pro",
-                        fee: template
-                          ? template.price
-                          : type === "basic"
-                            ? 3000
-                            : 6000,
-                        consumable: template
-                          ? template.consumable_amount
-                          : type === "basic"
-                            ? 5000
-                            : 10000,
-                        validTo:
-                          template && template.valid_until
-                            ? template.valid_until
-                            : "",
-                        noExpiration: template
-                          ? template.no_expiration === 1
-                          : false,
+                        type: template.type,
+                        templateId: selectedId,
+                        name: template.name,
+                        fee: template.price,
+                        consumable: template.consumable_amount,
+                        validTo: template.valid_until || "",
+                        noExpiration: template.no_expiration === 1,
                       });
                     }}
                     className="w-full p-2 border rounded"
@@ -1951,7 +2544,7 @@ export default function CustomersPage() {
                     {membershipTemplates
                       .filter((m) => m.type === "promo")
                       .map((m) => (
-                        <option key={m.id} value="promo">
+                        <option key={m.id} value={m.id}>
                           {m.name} (Promo)
                         </option>
                       ))}
@@ -2134,7 +2727,11 @@ export default function CustomersPage() {
                 </div>
 
                 {/* Promo-only Fields */}
-                {(selectedType === "promo" || membershipTemplates.find(m => m.id.toString() === selectedType && m.type === "promo")) && (
+                {(selectedType === "promo" ||
+                  membershipTemplates.find(
+                    (m) =>
+                      m.id.toString() === selectedType && m.type === "promo"
+                  )) && (
                   <>
                     <div>
                       <label className="block text-sm font-medium mb-1">
@@ -2392,6 +2989,175 @@ export default function CustomersPage() {
         )}
       </AnimatePresence>
 
+      {/* Upgrade Membership Modal */}
+      <AnimatePresence>
+        {isUpgradeModalOpen && customerForUpgrade && (
+          <motion.div
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <motion.div
+              className="bg-white p-6 rounded-lg w-full max-w-md"
+              initial={{ scale: 0.9, y: 20, opacity: 0 }}
+              animate={{ scale: 1, y: 0, opacity: 1 }}
+              exit={{ scale: 0.9, y: 20, opacity: 0 }}
+              transition={{ duration: 0.25 }}
+            >
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-bold">Upgrade to Pro Membership</h2>
+                <button
+                  onClick={() => setIsUpgradeModalOpen(false)}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  <X size={24} />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-4 rounded-lg border border-purple-200">
+                  <h3 className="font-semibold text-purple-800 mb-2 flex items-center">
+                    🚀 Upgrade Details
+                  </h3>
+                  <div className="text-sm text-purple-700 space-y-3">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <div className="text-xs text-purple-600 font-medium">
+                          Customer
+                        </div>
+                        <div className="font-semibold truncate">
+                          {customerForUpgrade.name}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-xs text-purple-600 font-medium">
+                          Current Plan
+                        </div>
+                        <div className="font-semibold">Basic (₱5,000)</div>
+                      </div>
+                      <div>
+                        <div className="text-xs text-purple-600 font-medium">
+                          New Plan
+                        </div>
+                        <div className="font-semibold text-purple-800">
+                          Pro (₱10,000)
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-xs text-purple-600 font-medium">
+                          Upgrade Price
+                        </div>
+                        <div className="font-semibold text-green-600">
+                          ₱3,000
+                        </div>
+                      </div>
+                    </div>
+
+                    {customerForUpgrade.membershipDetails && (
+                      <div className="bg-white p-3 rounded border border-purple-100 mt-2">
+                        <div className="flex justify-between items-center text-xs">
+                          <span className="text-purple-600">
+                            Days since registration:
+                          </span>
+                          <span className="font-semibold bg-purple-100 px-2 py-1 rounded">
+                            {Math.floor(
+                              (new Date() -
+                                new Date(
+                                  customerForUpgrade.membershipDetails.dateRegistered
+                                )) /
+                                (1000 * 60 * 60 * 24)
+                            )}{" "}
+                            / 23 days
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center text-xs mt-2">
+                          <span className="text-purple-600">
+                            Current balance:
+                          </span>
+                          <span className="font-semibold text-green-600 bg-green-50 px-2 py-1 rounded">
+                            ₱
+                            {Number(
+                              customerForUpgrade.membershipDetails
+                                .remainingBalance
+                            ).toLocaleString("en-PH")}{" "}
+                            (Full)
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center text-xs mt-2">
+                          <span className="text-purple-600">Status:</span>
+                          <span className="font-semibold text-green-600 bg-green-100 px-2 py-1 rounded">
+                            ✅ Eligible for Upgrade
+                          </span>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="flex items-start text-xs text-purple-600 mt-2 p-2 bg-purple-25 rounded">
+                      <span className="mr-2">💡</span>
+                      <span>
+                        You're upgrading within the 23-day window with unused
+                        balance - perfect timing!
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1 text-gray-700">
+                    Payment Method
+                  </label>
+                  <select
+                    value={upgradePaymentMethod}
+                    onChange={(e) => setUpgradePaymentMethod(e.target.value)}
+                    className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  >
+                    <option value="Cash">Cash</option>
+                    <option value="GCash">GCash</option>
+                    <option value="Card">Card</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex justify-end space-x-3 mt-6">
+                <button
+                  onClick={() => setIsUpgradeModalOpen(false)}
+                  className="px-4 py-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors"
+                  disabled={isUpgrading}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() =>
+                    handleUpgradeMembership(
+                      customerForUpgrade.id,
+                      upgradePaymentMethod
+                    )
+                  }
+                  disabled={isUpgrading}
+                  className={`px-4 py-2 rounded-lg transition-all ${
+                    isUpgrading
+                      ? "bg-purple-400 cursor-not-allowed text-white"
+                      : "bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-md hover:shadow-lg"
+                  }`}
+                >
+                  {isUpgrading ? (
+                    <div className="flex items-center">
+                      <RefreshCw className="animate-spin mr-2" size={16} />
+                      Upgrading...
+                    </div>
+                  ) : (
+                    "Confirm Upgrade"
+                  )}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Edit Customer Modal */}
       <AnimatePresence>
         {isEditModalOpen && editCustomer && (
           <motion.div
