@@ -75,61 +75,70 @@ export default function CustomersPage() {
   const [isUpgrading, setIsUpgrading] = useState(false);
 
   const checkUpgradeEligibility = (customer) => {
-    if (
-      !customer.membershipDetails ||
-      customer.membership_status?.toLowerCase() !== "basic"
-    ) {
-      return { eligible: false, reason: "Not a Basic member" };
-    }
+  // If customer doesn't have membershipDetails but exists in local state, use local state data
+  const localCustomer = customers.find(c => c.id === customer.id) || customer;
+  
+  if (
+    !localCustomer.membershipDetails ||
+    localCustomer.membership_status?.toLowerCase() !== "basic"
+  ) {
+    return { eligible: false, reason: "Not a Basic member" };
+  }
 
-    const registrationDate = new Date(
-      customer.membershipDetails.dateRegistered
-    );
-    const today = new Date();
-    const daysSinceRegistration = Math.floor(
-      (today - registrationDate) / (1000 * 60 * 60 * 24)
-    );
-    const daysRemaining = 23 - daysSinceRegistration;
+  const registrationDate = new Date(
+    localCustomer.membershipDetails.dateRegistered
+  );
+  const today = new Date();
+  const daysSinceRegistration = Math.floor(
+    (today - registrationDate) / (1000 * 60 * 60 * 24)
+  );
+  const daysRemaining = 23 - daysSinceRegistration;
 
-    const remainingBalance = customer.membershipDetails.remainingBalance;
-    const originalCoverage = customer.membershipDetails.coverage;
+  const remainingBalance = localCustomer.membershipDetails.remainingBalance;
+  const originalCoverage = localCustomer.membershipDetails.coverage;
 
-    const isWithin23Days = daysSinceRegistration <= 23;
-    const hasFullBalance = remainingBalance >= originalCoverage; // Must have full balance
+  const isWithin23Days = daysSinceRegistration <= 23;
+  const hasFullBalance = remainingBalance >= originalCoverage;
 
-    if (!isWithin23Days) {
-      return {
-        eligible: false,
-        reason: "Upgrade period expired",
-        daysSinceRegistration,
-        daysRemaining: 0,
-        hasFullBalance,
-      };
-    }
-
-    if (!hasFullBalance) {
-      return {
-        eligible: false,
-        reason: "Balance already used",
-        daysSinceRegistration,
-        daysRemaining,
-        hasFullBalance,
-      };
-    }
-
+  if (!isWithin23Days) {
     return {
-      eligible: true,
-      reason: "Eligible for upgrade",
+      eligible: false,
+      reason: "Upgrade period expired",
+      daysSinceRegistration,
+      daysRemaining: 0,
+      hasFullBalance,
+    };
+  }
+
+  if (!hasFullBalance) {
+    return {
+      eligible: false,
+      reason: "Balance already used",
       daysSinceRegistration,
       daysRemaining,
       hasFullBalance,
     };
+  }
+
+  return {
+    eligible: true,
+    reason: "Eligible for upgrade",
+    daysSinceRegistration,
+    daysRemaining,
+    hasFullBalance,
   };
+};
 
   useEffect(() => {
   if (selectedCustomer) {
-    console.log('Selected Customer:', selectedCustomer);
-    console.log('Upgrade Eligibility:', checkUpgradeEligibility(selectedCustomer));
+    console.log('Selected Customer Details:', {
+      id: selectedCustomer.id,
+      name: selectedCustomer.name,
+      membership_status: selectedCustomer.membership_status,
+      membership: selectedCustomer.membership,
+      membershipDetails: selectedCustomer.membershipDetails,
+      upgradeEligibility: checkUpgradeEligibility(selectedCustomer)
+    });
   }
 }, [selectedCustomer]);
 
@@ -351,54 +360,57 @@ export default function CustomersPage() {
   };
 
   const fetchCustomerDetails = async (customerId) => {
-    setIsLoadingDetails(true);
-    try {
-      const res = await fetch(
-        `https://api.lizlyskincare.sbs/customers.php?customerId=${customerId}`
+  setIsLoadingDetails(true);
+  try {
+    const res = await fetch(
+      `https://api.lizlyskincare.sbs/customers.php?customerId=${customerId}`
+    );
+    const data = await res.json();
+
+    // Get the current customer from local state to preserve upgrade-related data
+    const currentCustomer = customers.find((c) => c.id === customerId);
+    
+    // Calculate isExpired for the individual customer
+    let isExpired = false;
+    if (
+      data.membershipDetails?.expire_date ||
+      data.membershipDetails?.expireDate
+    ) {
+      const expireDate = new Date(
+        data.membershipDetails.expire_date ||
+          data.membershipDetails.expireDate
       );
-      const data = await res.json();
-
-      // Calculate isExpired for the individual customer
-      let isExpired = false;
-      if (
-        data.membershipDetails?.expire_date ||
-        data.membershipDetails?.expireDate
-      ) {
-        const expireDate = new Date(
-          data.membershipDetails.expire_date ||
-            data.membershipDetails.expireDate
-        );
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        expireDate.setHours(0, 0, 0, 0);
-        isExpired = expireDate < today;
-      }
-
-      // Make sure to include all expected properties in the result
-      setSelectedCustomer({
-        id: data.id,
-        name: data.name,
-        contact: data.contact,
-        email: data.email,
-        address: data.address,
-        birthday: data.birthday,
-        customerId: data.customerId,
-        membership: data.membership || "None",
-        membershipDetails: data.membershipDetails || null,
-        transactions: data.transactions || [],
-        isExpired: isExpired, // Add the calculated isExpired property
-        // Also preserve any existing new member flags from the local state
-        isNewMember:
-          customers.find((c) => c.id === customerId)?.isNewMember || false,
-        newMemberType: customers.find((c) => c.id === customerId)
-          ?.newMemberType,
-      });
-    } catch (error) {
-      console.error("Error fetching customer details:", error);
-    } finally {
-      setIsLoadingDetails(false);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      expireDate.setHours(0, 0, 0, 0);
+      isExpired = expireDate < today;
     }
-  };
+
+    // Preserve the local state data that affects upgrade eligibility
+    setSelectedCustomer({
+      id: data.id,
+      name: data.name,
+      contact: data.contact,
+      email: data.email,
+      address: data.address,
+      birthday: data.birthday,
+      customerId: data.customerId,
+      membership: data.membership || "None",
+      membershipDetails: data.membershipDetails || null,
+      transactions: data.transactions || [],
+      isExpired: isExpired,
+      // Preserve these from local state instead of API response
+      isNewMember: currentCustomer?.isNewMember || false,
+      newMemberType: currentCustomer?.newMemberType,
+      // Preserve membership_status from local state if it exists
+      membership_status: currentCustomer?.membership_status || data.membership_status || "None",
+    });
+  } catch (error) {
+    console.error("Error fetching customer details:", error);
+  } finally {
+    setIsLoadingDetails(false);
+  }
+};
 
   const fetchMembershipLogs = async (filter = "all") => {
     setLogsLoading(true);
@@ -1868,18 +1880,18 @@ export default function CustomersPage() {
                                 </motion.button>
 
                                 <motion.button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setSelectedCustomer(customer);
-                                    fetchCustomerDetails(customer.id);
-                                  }}
-                                  className="text-purple-600 hover:text-purple-800 p-1 rounded-md hover:bg-purple-100 transition-colors"
-                                  whileHover={{ scale: 1.2 }}
-                                  whileTap={{ scale: 0.9 }}
-                                  title="View Details"
-                                >
-                                  <Eye size={14} />
-                                </motion.button>
+  onClick={(e) => {
+    e.stopPropagation();
+    // Use the customer from local state instead of fetching details
+    setSelectedCustomer(customer);
+  }}
+  className="text-purple-600 hover:text-purple-800 p-1 rounded-md hover:bg-purple-100 transition-colors"
+  whileHover={{ scale: 1.2 }}
+  whileTap={{ scale: 0.9 }}
+  title="View Details"
+>
+  <Eye size={14} />
+</motion.button>
                               </div>
                             </td>
                           </motion.tr>
