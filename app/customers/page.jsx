@@ -344,57 +344,54 @@ export default function CustomersPage() {
   };
 
   const fetchCustomerDetails = async (customerId) => {
-  setIsLoadingDetails(true);
-  try {
-    const res = await fetch(
-      `https://api.lizlyskincare.sbs/customers.php?customerId=${customerId}`
-    );
-    const data = await res.json();
-
-    // Get the current customer from the local state to preserve additional properties
-    const currentCustomer = customers.find((c) => c.id === customerId);
-
-    // Calculate isExpired for the individual customer
-    let isExpired = false;
-    if (
-      data.membershipDetails?.expire_date ||
-      data.membershipDetails?.expireDate
-    ) {
-      const expireDate = new Date(
-        data.membershipDetails.expire_date ||
-          data.membershipDetails.expireDate
+    setIsLoadingDetails(true);
+    try {
+      const res = await fetch(
+        `https://api.lizlyskincare.sbs/customers.php?customerId=${customerId}`
       );
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      expireDate.setHours(0, 0, 0, 0);
-      isExpired = expireDate < today;
-    }
+      const data = await res.json();
 
-    // Make sure to include all expected properties in the result
-    setSelectedCustomer({
-      id: data.id,
-      name: data.name,
-      contact: data.contact,
-      email: data.email,
-      address: data.address,
-      birthday: data.birthday,
-      customerId: data.customerId,
-      membership: data.membership || "None",
-      membership_status: data.membership_status || currentCustomer?.membership_status || "None", // Use membership_status consistently
-      membership_id: data.membership_id || currentCustomer?.membership_id,
-      membershipDetails: data.membershipDetails || null,
-      transactions: data.transactions || [],
-      isExpired: isExpired,
-      // Also preserve any existing new member flags from the local state
-      isNewMember: currentCustomer?.isNewMember || false,
-      newMemberType: currentCustomer?.newMemberType,
-    });
-  } catch (error) {
-    console.error("Error fetching customer details:", error);
-  } finally {
-    setIsLoadingDetails(false);
-  }
-};
+      // Calculate isExpired for the individual customer
+      let isExpired = false;
+      if (
+        data.membershipDetails?.expire_date ||
+        data.membershipDetails?.expireDate
+      ) {
+        const expireDate = new Date(
+          data.membershipDetails.expire_date ||
+            data.membershipDetails.expireDate
+        );
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        expireDate.setHours(0, 0, 0, 0);
+        isExpired = expireDate < today;
+      }
+
+      // Make sure to include all expected properties in the result
+      setSelectedCustomer({
+        id: data.id,
+        name: data.name,
+        contact: data.contact,
+        email: data.email,
+        address: data.address,
+        birthday: data.birthday,
+        customerId: data.customerId,
+        membership: data.membership || "None",
+        membershipDetails: data.membershipDetails || null,
+        transactions: data.transactions || [],
+        isExpired: isExpired, // Add the calculated isExpired property
+        // Also preserve any existing new member flags from the local state
+        isNewMember:
+          customers.find((c) => c.id === customerId)?.isNewMember || false,
+        newMemberType: customers.find((c) => c.id === customerId)
+          ?.newMemberType,
+      });
+    } catch (error) {
+      console.error("Error fetching customer details:", error);
+    } finally {
+      setIsLoadingDetails(false);
+    }
+  };
 
   const fetchMembershipLogs = async (filter = "all") => {
     setLogsLoading(true);
@@ -1863,19 +1860,39 @@ export default function CustomersPage() {
                                   <Edit size={14} />
                                 </motion.button>
 
-                                <motion.button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setSelectedCustomer(customer);
-                                    fetchCustomerDetails(customer.id);
-                                  }}
-                                  className="text-purple-600 hover:text-purple-800 p-1 rounded-md hover:bg-purple-100 transition-colors"
-                                  whileHover={{ scale: 1.2 }}
-                                  whileTap={{ scale: 0.9 }}
-                                  title="View Details"
-                                >
-                                  <Eye size={14} />
-                                </motion.button>
+                                // In the customer details panel section, update the eye button to:
+<motion.button
+  onClick={(e) => {
+    e.stopPropagation();
+    
+    // Check if customer is eligible for upgrade
+    const upgradeStatus = checkUpgradeEligibility(customer);
+    
+    if (upgradeStatus.eligible) {
+      // If eligible for upgrade, open upgrade modal
+      setCustomerForUpgrade(customer);
+      setIsUpgradeModalOpen(true);
+    } else {
+      // If not eligible, just view details as normal
+      setSelectedCustomer(customer);
+      fetchCustomerDetails(customer.id);
+    }
+  }}
+  className={`p-1 rounded-md transition-colors ${
+    checkUpgradeEligibility(customer).eligible
+      ? "text-purple-600 hover:text-purple-800 hover:bg-purple-100"
+      : "text-purple-600 hover:text-purple-800 hover:bg-purple-100"
+  }`}
+  whileHover={{ scale: 1.2 }}
+  whileTap={{ scale: 0.9 }}
+  title={
+    checkUpgradeEligibility(customer).eligible
+      ? "View Details & Upgrade"
+      : "View Details"
+  }
+>
+  <Eye size={14} />
+</motion.button>
                               </div>
                             </td>
                           </motion.tr>
@@ -2278,8 +2295,8 @@ export default function CustomersPage() {
                       </div>
 
                       {/* In the Customer Details Panel - Membership Status section */}
-<div className="mt-3 space-y-2">
-  {selectedCustomer.membership_status === "None" || !selectedCustomer.membership_status ? (
+                      <div className="mt-3 space-y-2">
+  {selectedCustomer.membership === "None" || selectedCustomer.membership_status === "None" ? (
     <motion.button
       onClick={() => handleAddMembershipClick(selectedCustomer)}
       className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
@@ -2305,8 +2322,10 @@ export default function CustomersPage() {
     // Check upgrade eligibility with proper fallbacks
     const upgradeStatus = checkUpgradeEligibility(selectedCustomer);
     
+    // Debug log to see what's happening
     console.log('Upgrade status for details panel:', {
       membership_status: selectedCustomer.membership_status,
+      membership: selectedCustomer.membership,
       membershipDetails: selectedCustomer.membershipDetails,
       upgradeStatus: upgradeStatus
     });
@@ -2314,17 +2333,17 @@ export default function CustomersPage() {
     if (upgradeStatus.eligible) {
       return (
         <motion.button
-          onClick={(e) => {
-            e.stopPropagation();
-            setCustomerForUpgrade(selectedCustomer);
-            setIsUpgradeModalOpen(true);
-          }}
-          className="w-full py-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white rounded-lg text-sm font-medium transition-colors shadow-md"
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-        >
-          Upgrade to Pro Membership
-        </motion.button>
+  onClick={(e) => {
+    e.stopPropagation();
+    setCustomerForUpgrade(selectedCustomer); // Add this line
+    setIsUpgradeModalOpen(true);
+  }}
+  className="w-full py-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white rounded-lg text-sm font-medium transition-colors shadow-md"
+  whileHover={{ scale: 1.02 }}
+  whileTap={{ scale: 0.98 }}
+>
+  Upgrade to Pro Membership
+</motion.button>
       );
     } else {
       return (
