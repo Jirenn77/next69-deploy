@@ -339,18 +339,6 @@ export default function ViewProfile() {
 
                 </Link>
 
-                <Link
-
-                  href="/roles"
-
-                  className="flex items-center gap-3 px-4 py-3 hover:bg-gray-100 w-full text-gray-700"
-
-                >
-
-                  <Settings size={16} /> Settings
-
-                </Link>
-
                 <button
 
                   className="flex items-center gap-3 px-4 py-3 hover:bg-red-50 w-full text-red-500"
